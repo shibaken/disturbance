@@ -343,7 +343,7 @@
                         <div class="row">
                             <div class="panel panel-default">
                                 <div class="panel-heading">
-                                    <h3 class="panel-title">Site Locations
+                                    <h3 class="panel-title">Site LocationsAHO
                                         <a class="panelClicker" :href="'#'+siteLocations" data-toggle="collapse"  data-parent="#userInfo" expanded="false" :aria-controls="siteLocations">
                                             <span class="glyphicon glyphicon-chevron-down pull-right "></span>
                                         </a>
