@@ -41,16 +41,17 @@ class Command(BaseCommand):
             sheet.write_row(0, col, line)
             for row, asoa in enumerate(qs.order_by('approval__current_proposal__applicant'), 1):
                 region_district = get_region_district(asoa.wkb_geometry)
-                line = [
-                    f'{asoa.approval.relevant_applicant_name}',
-                    f'{asoa.apiary_site_id}',
-                    f'{asoa.wkb_geometry.coords}',
-                    f'{asoa.site_status}',
-                    f'{asoa.site_category.name}',
-                    f'{asoa.licensed_site}',
-                    f'{region_district}'
-                ]
-                sheet.write_row(row, col, line)
+                if 'FRANKLAND' in region_district:
+                    line = [
+                        f'{asoa.approval.relevant_applicant_name}',
+                        f'{asoa.apiary_site_id}',
+                        f'{asoa.wkb_geometry.coords}',
+                        f'{asoa.site_status}',
+                        f'{asoa.site_category.name}',
+                        f'{asoa.licensed_site}',
+                        f'{region_district}'
+                    ]
+                    sheet.write_row(row, col, line)
 
         email = EmailMessage(
             subject=f'Apiary Sites List - {date_str}',
