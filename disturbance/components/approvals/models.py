@@ -232,6 +232,20 @@ class Approval(RevisionedMixin):
             return self.proxy_applicant
 
     @property
+    def relevant_applicant_phone_number(self):
+        if isinstance(self.relevant_applicant, EmailUser):
+            return self.relevant_applicant.phone_number
+        elif isinstance(self.relevant_applicant, Organisation):
+            admins = self.relevant_applicant.contacts.filter(user_status__in=('active', 'suspended', 'contact_form',), is_admin=True)
+            admin = admins.first() if admins else None
+            if admin:
+                return admin.phone_number
+            else:
+                return ''
+        else:
+            return ''
+
+    @property
     def relevant_applicant_email(self):
         if self.applicant and hasattr(self.applicant.organisation, 'email') and self.applicant.organisation.email:
             return self.applicant.organisation.email

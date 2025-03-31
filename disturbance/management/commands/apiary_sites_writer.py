@@ -36,7 +36,10 @@ class Command(BaseCommand):
                 'Site Status',
                 'Zone',
                 'Licensed Site',
-                'Region/District'
+                'Region/District',
+                'Phone',
+                'Email',
+                'Address',
             ]
             sheet.write_row(0, col, line)
             for row, asoa in enumerate(qs.order_by('approval__current_proposal__applicant'), 1):
@@ -49,7 +52,10 @@ class Command(BaseCommand):
                         f'{asoa.site_status}',
                         f'{asoa.site_category.name}',
                         f'{asoa.licensed_site}',
-                        f'{region_district}'
+                        f'{region_district}',
+                        f'{asoa.approval.relevant_applicant_phone_number}',
+                        f'{asoa.approval.relevant_applicant_email}',
+                        f'{asoa.approval.relevant_applicant_address}',
                     ]
                     sheet.write_row(row, col, line)
 
