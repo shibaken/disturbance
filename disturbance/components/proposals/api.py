@@ -842,39 +842,39 @@ class ApiarySiteViewSet(viewsets.ModelViewSet):
         serializer_proposal.data['features'].extend(serializer_approval.data['features'])
         return Response(serializer_proposal.data)
 
-    @basic_exception_handler
+    # @basic_exception_handler
     def partial_update(self, request, *args, **kwargs):
-        with transaction.atomic():
-            apiary_site = self.get_object()
-            new_status = request.data.get('status', None)
-            new_availability = request.data.get('available', None)
+        pk = int(self.kwargs.get('pk', 0))
+        apiary_site = ApiarySite.objects.get(id=pk)
+        new_status = request.data.get('status', None)
+        new_availability = request.data.get('available', None)
 
-            if new_status:
-                if new_status == SITE_STATUS_VACANT:
-                    if apiary_site.latest_proposal_link.site_status == SITE_STATUS_DENIED:
-                        apiary_site.make_vacant(True, apiary_site.latest_proposal_link)
-                        # This apiary site must have been in the 'denied' status
-                        serializer = ApiarySiteOnProposalProcessedGeometrySerializer(apiary_site.latest_proposal_link)
-                        return Response(serializer.data)
-                    elif apiary_site.latest_approval_link.site_status == SITE_STATUS_NOT_TO_BE_REISSUED:
-                        apiary_site.make_vacant(True, apiary_site.latest_approval_link)
-                        # This apiary site must have been in the 'not_to_be_reissued' status
-                        serializer = ApiarySiteOnApprovalGeometrySerializer(apiary_site.latest_approval_link)
-                        return Response(serializer.data)
-                    else:
-                        # Should not reach here
-                        return Response({})
+        if new_status:
+            if new_status == SITE_STATUS_VACANT:
+                if apiary_site.latest_proposal_link.site_status == SITE_STATUS_DENIED:
+                    apiary_site.make_vacant(True, apiary_site.latest_proposal_link)
+                    # This apiary site must have been in the 'denied' status
+                    serializer = ApiarySiteOnProposalProcessedGeometrySerializer(apiary_site.latest_proposal_link)
+                    return Response(serializer.data)
+                elif apiary_site.latest_approval_link.site_status == SITE_STATUS_NOT_TO_BE_REISSUED:
+                    apiary_site.make_vacant(True, apiary_site.latest_approval_link)
+                    # This apiary site must have been in the 'not_to_be_reissued' status
+                    serializer = ApiarySiteOnApprovalGeometrySerializer(apiary_site.latest_approval_link)
+                    return Response(serializer.data)
                 else:
-                    # For now, this function is only used to change the status to the 'vacant'
+                    # Should not reach here
                     return Response({})
             else:
-                apiary_site_on_approval = apiary_site.latest_approval_link
-                if apiary_site_on_approval.site_status == SITE_STATUS_CURRENT:  # Make sure if the apiary site is 'current' status
-                    apiary_site_on_approval.available = new_availability
-                    apiary_site_on_approval.save()
-                serializer = ApiarySiteOnApprovalGeometrySerializer(apiary_site_on_approval)
-                print(serializer.data['properties']['available'])
-                return Response(serializer.data)
+                # For now, this function is only used to change the status to the 'vacant'
+                return Response({})
+        else:
+            apiary_site_on_approval = apiary_site.latest_approval_link
+            if apiary_site_on_approval.site_status == SITE_STATUS_CURRENT:  # Make sure if the apiary site is 'current' status
+                apiary_site_on_approval.available = new_availability
+                apiary_site_on_approval.save()
+            serializer = ApiarySiteOnApprovalGeometrySerializer(apiary_site_on_approval)
+            print(serializer.data['properties']['available'])
+            return Response(serializer.data)
 
             # instance = self.get_object()
             #
