@@ -442,9 +442,14 @@ admin.site.register(disturbance.components.proposals.models.SiteCategory, SiteCa
 
 @admin.register(models.ApiaryChecklistQuestion)
 class ApiaryChecklistQuestionAdmin(admin.ModelAdmin):
-    #list_display = ['text', 'answer_type', 'order']
-    list_display = ['answer_type', 'checklist_type', 'checklist_role', 'order', 'text',]
+    list_display = ['id', 'answer_type', 'checklist_type', 'checklist_role', 'order', 'text',]
+    list_filter = ['answer_type', 'checklist_type', 'checklist_role',]
     ordering = ('order',)
+
+
+@admin.register(models.ApiaryChecklistAnswer)
+class ApiaryChecklistAnswerAdmin(admin.ModelAdmin):
+    list_display = ['id', 'question', 'answer', 'proposal', 'apiary_referral', 'text_answer', 'apiary_site',]
 
 
 @admin.register(models.QuestionOption)

@@ -4814,8 +4814,8 @@ class ApiaryChecklistAnswer(models.Model):
 
     class Meta:
         app_label = 'disturbance'
-        verbose_name = 'CheckList answer'
-        verbose_name_plural = 'CheckList answers'
+        verbose_name = 'Apiary CheckList answer'
+        verbose_name_plural = 'Apiary CheckList answers'
 
 #class ApiaryTemporaryUseDocument(DefaultDocument):
 #    temporary_use = models.ForeignKey('ProposalApiaryTemporaryUse', related_name='apiary_temporary_use_documents')
