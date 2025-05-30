@@ -458,6 +458,12 @@ class ApiarySiteAdmin(admin.ModelAdmin):
     list_filter = ['is_vacant',]
 
 
+@admin.register(models.ApiarySiteOnProposal)
+class ApiarySiteOnProposalAdmin(admin.ModelAdmin):
+    list_display = ['id', 'apiary_site', 'site_status', 'proposal_apiary', 'for_renewal', 'application_fee_paid', 'licensed_site',]
+    list_filter = ['site_status', 'application_fee_paid', 'licensed_site',]
+
+
 @admin.register(models.QuestionOption)
 class QuestionOptionAdmin(admin.ModelAdmin):
     list_display = ['label',]
