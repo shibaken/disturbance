@@ -454,8 +454,12 @@ class ApiaryChecklistAnswerAdmin(admin.ModelAdmin):
 
 @admin.register(models.ApiarySite)
 class ApiarySiteAdmin(admin.ModelAdmin):
-    list_display = ['id', 'site_guid', 'latest_proposal_link', 'latest_approval_link', 'proposal_link_for_vacant', 'approval_link_for_vacant', 'is_vacant',]
+    list_display = ['id', 'site_guid', 'latest_proposal_link', 'get_latest_approval_link', 'proposal_link_for_vacant', 'approval_link_for_vacant', 'is_vacant',]
     list_filter = ['is_vacant',]
+
+    def get_latest_approval_link(self, obj):
+        return format_html(f'<a href="/ledger/admin/disturbance/apiarysiteonapproval/{obj.latest_approval_link.id}/change">{obj.latest_approval_link}</a>') if obj.latest_approval_link else '-'
+    get_latest_approval_link.short_description = 'Latest approval link'
 
 
 @admin.register(models.ApiarySiteOnProposal)
