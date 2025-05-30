@@ -452,6 +452,12 @@ class ApiaryChecklistAnswerAdmin(admin.ModelAdmin):
     list_display = ['id', 'question', 'answer', 'proposal', 'apiary_referral', 'text_answer', 'apiary_site',]
 
 
+@admin.register(models.ApiarySite)
+class ApiarySiteAdmin(admin.ModelAdmin):
+    list_display = ['id', 'site_guid', 'latest_proposal_link', 'latest_approval_link', 'proposal_link_for_vacant', 'approval_link_for_vacant', 'is_vacant',]
+    list_filter = ['is_vacant',]
+
+
 @admin.register(models.QuestionOption)
 class QuestionOptionAdmin(admin.ModelAdmin):
     list_display = ['label',]
