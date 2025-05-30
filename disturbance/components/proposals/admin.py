@@ -454,12 +454,24 @@ class ApiaryChecklistAnswerAdmin(admin.ModelAdmin):
 
 @admin.register(models.ApiarySite)
 class ApiarySiteAdmin(admin.ModelAdmin):
-    list_display = ['id', 'site_guid', 'latest_proposal_link', 'get_latest_approval_link', 'proposal_link_for_vacant', 'approval_link_for_vacant', 'is_vacant',]
+    list_display = ['id', 'site_guid', 'get_latest_proposal_link', 'get_latest_approval_link', 'get_proposal_link_for_vacant', 'get_approval_link_for_vacant', 'is_vacant',]
     list_filter = ['is_vacant',]
 
     def get_latest_approval_link(self, obj):
         return format_html(f'<a href="/ledger/admin/disturbance/apiarysiteonapproval/{obj.latest_approval_link.id}/change">{obj.latest_approval_link}</a>') if obj.latest_approval_link else '-'
     get_latest_approval_link.short_description = 'Latest approval link'
+
+    def get_latest_proposal_link(self, obj):
+        return format_html(f'<a href="/ledger/admin/disturbance/apiarysiteonproposal/{obj.latest_proposal_link.id}/change">{obj.latest_proposal_link}</a>') if obj.latest_proposal_link else '-'
+    get_latest_proposal_link.short_description = 'Latest proposal link'
+
+    def get_proposal_link_for_vacant(self, obj):
+        return format_html(f'<a href="/ledger/admin/disturbance/apiarysiteonproposal/{obj.proposal_link_for_vacant.id}/change">{obj.proposal_link_for_vacant}</a>') if obj.proposal_link_for_vacant else '-'
+    get_proposal_link_for_vacant.short_description = 'Proposal link for vacant'
+
+    def get_approval_link_for_vacant(self, obj):
+        return format_html(f'<a href="/ledger/admin/disturbance/apiarysiteonapproval/{obj.approval_link_for_vacant.id}/change">{obj.approval_link_for_vacant}</a>') if obj.approval_link_for_vacant else '-'
+    get_approval_link_for_vacant.short_description = 'Approval link for vacant'
 
 
 @admin.register(models.ApiarySiteOnProposal)
