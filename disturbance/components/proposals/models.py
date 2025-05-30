@@ -4796,6 +4796,8 @@ class ApiaryChecklistQuestion(RevisionedMixin):
     class Meta:
         app_label = 'disturbance'
         ordering = ['order', 'id']
+        verbose_name = 'Apiary CheckList Question'
+        verbose_name_plural = 'Apiary CheckList Questions'
 
 
 class ApiaryChecklistAnswer(models.Model):
@@ -4814,8 +4816,8 @@ class ApiaryChecklistAnswer(models.Model):
 
     class Meta:
         app_label = 'disturbance'
-        verbose_name = 'Apiary CheckList answer'
-        verbose_name_plural = 'Apiary CheckList answers'
+        verbose_name = 'Apiary CheckList Answer'
+        verbose_name_plural = 'Apiary CheckList Answers'
 
 #class ApiaryTemporaryUseDocument(DefaultDocument):
 #    temporary_use = models.ForeignKey('ProposalApiaryTemporaryUse', related_name='apiary_temporary_use_documents')
