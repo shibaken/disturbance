@@ -443,6 +443,7 @@ admin.site.register(disturbance.components.proposals.models.SiteCategory, SiteCa
 @admin.register(models.ApiaryChecklistQuestion)
 class ApiaryChecklistQuestionAdmin(admin.ModelAdmin):
     #list_display = ['text', 'answer_type', 'order']
+    list_display = ['answer_type', 'checklist_type', 'checklist_role', 'order', 'text',]
     ordering = ('order',)
 
 
