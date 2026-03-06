@@ -172,12 +172,11 @@ class Approval(RevisionedMixin):
 
     def add_apiary_sites_to_proposal_apiary_for_renewal(self, proposal_apiary):
         for apiary_site_on_approval in self.get_relations():
-            relation = self.get_relation(apiary_site_on_approval.apiary_site)
             ApiarySiteOnProposal.objects.create(
                 apiary_site=apiary_site_on_approval.apiary_site,
                 proposal_apiary=proposal_apiary,
-                wkb_geometry_draft=relation.wkb_geometry,
-                site_category_draft=relation.site_category,
+                wkb_geometry_draft=apiary_site_on_approval.wkb_geometry,
+                site_category_draft=apiary_site_on_approval.site_category,
                 for_renewal=True,
             )
 
