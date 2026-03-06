@@ -2654,9 +2654,29 @@ class Proposal(DirtyFieldsMixin, RevisionedMixin):
             except:
                 raise
 
+    def get_latest_related_amend_renew_proposal(self):
+        from disturbance.components.approvals.models import Approval
+
+        approvals = Approval.objects.filter(current_proposal=self)
+        approval = approvals.first() if approvals.exists() else None
+
+        if not approval:
+            raise ValidationError("Invalid proposal id provided for approval amendment/renewal.")
+        
+        return Proposal.objects.filter(approval=approval).order_by("id").last()
+
     def renew_approval(self,request):
         with transaction.atomic():
             previous_proposal = self
+            if previous_proposal.application_type and previous_proposal.application_type.name == "Site Transfer":
+                #if this application is a site transfer, set the previous proposal to last apiary proposal on the approval
+                previous_proposal = previous_proposal.get_latest_related_amend_renew_proposal()
+                if previous_proposal and previous_proposal != self:
+                    proposal = previous_proposal.renew_approval(request)
+                    return proposal
+                else:
+                    raise ValidationError("Approval has no valid proposal to renew with.")
+            
             try:
                 proposal=Proposal.objects.get(previous_application = previous_proposal)
                 if proposal.customer_status=='with_assessor':
@@ -2708,6 +2728,15 @@ class Proposal(DirtyFieldsMixin, RevisionedMixin):
     def amend_approval(self,request):
         with transaction.atomic():
             previous_proposal = self
+            if previous_proposal.application_type and previous_proposal.application_type.name == "Site Transfer":
+                #if this application is a site transfer, set the previous proposal to last apiary proposal on the approval
+                previous_proposal = previous_proposal.get_latest_related_amend_renew_proposal()
+                if previous_proposal and previous_proposal != self:
+                    proposal = previous_proposal.amend_approval(request)
+                    return proposal
+                else:
+                    raise ValidationError("Approval has no valid proposal to amend with.")
+                
             try:
                 amend_conditions = {
                 'previous_application': previous_proposal,
