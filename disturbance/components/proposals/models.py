@@ -2657,13 +2657,12 @@ class Proposal(DirtyFieldsMixin, RevisionedMixin):
     def get_latest_related_amend_renew_proposal(self):
         from disturbance.components.approvals.models import Approval
 
-        approvals = Approval.objects.filter(current_proposal=self)
-        approval = approvals.first() if approvals.exists() else None
-
-        if not approval:
-            raise ValidationError("Invalid proposal id provided for approval amendment/renewal.")
+        if self.application_type == ApplicationType.SITE_TRANSFER:
+            approval = self.proposal_apiary.originating_approval
+            if not approval:
+                raise ValidationError("Invalid proposal id provided for approval amendment/renewal.")
         
-        return Proposal.objects.filter(approval=approval).exclude(application_type__name=ApplicationType.SITE_TRANSFER).order_by("id").last()
+            return Proposal.objects.filter(approval=approval).exclude(application_type__name=ApplicationType.SITE_TRANSFER).order_by("id").last()
 
     def renew_approval(self,request):
         with transaction.atomic():
