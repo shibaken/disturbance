@@ -2663,7 +2663,7 @@ class Proposal(DirtyFieldsMixin, RevisionedMixin):
         if not approval:
             raise ValidationError("Invalid proposal id provided for approval amendment/renewal.")
         
-        return Proposal.objects.filter(approval=approval).order_by("id").last()
+        return Proposal.objects.filter(approval=approval).exclude(application_type__name=ApplicationType.SITE_TRANSFER).order_by("id").last()
 
     def renew_approval(self,request):
         with transaction.atomic():
