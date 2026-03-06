@@ -2657,7 +2657,7 @@ class Proposal(DirtyFieldsMixin, RevisionedMixin):
     def get_latest_related_amend_renew_proposal(self):
         from disturbance.components.approvals.models import Approval
 
-        if self.application_type == ApplicationType.SITE_TRANSFER:
+        if self.application_type.name == ApplicationType.SITE_TRANSFER:
             approval = self.proposal_apiary.originating_approval
             if not approval:
                 raise ValidationError("Invalid proposal id provided for approval amendment/renewal.")
