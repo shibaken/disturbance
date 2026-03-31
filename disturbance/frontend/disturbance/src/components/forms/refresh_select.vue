@@ -102,6 +102,26 @@ data: function() {
             });
             vm.isRefreshing= false;  
         },
+        loadExternalProposalForm: function(proposal){
+            let parent = this.$parent;
+            while (parent) {
+                if (typeof parent.refreshFromResponseProposal === 'function') {
+                    parent.refreshFromResponseProposal(proposal);
+                    return true;
+                }
+                parent = parent.$parent;
+            }
+            return false;
+        },
+         reloadExternalProposalFormIfError: function(){
+            this.$http.get(`/api/proposal/${this.proposal_id}.json`).then((response) => {
+                if (!this.loadExternalProposalForm(response.body)) {
+                    window.location.reload();
+                }
+            }, () => {
+                window.location.reload();
+            });
+        },
         refresh: async function(){
             let vm=this;
             var ele=$('[name='+vm.parent_name+']')[0]
@@ -177,7 +197,9 @@ data: function() {
                     helpers.apiVueResourceError(error),
                     //error.body,
                     'error'
-                )
+                ).then(() => {
+                    vm.reloadExternalProposalFormIfError();
+                 });
             });
             vm.isRefreshing= false;  
         },
