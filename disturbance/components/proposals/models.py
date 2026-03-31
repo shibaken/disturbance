@@ -2654,13 +2654,29 @@ class Proposal(DirtyFieldsMixin, RevisionedMixin):
             except:
                 raise
 
-    def get_latest_related_amend_renew_proposal(self):
+    def get_latest_related_amend_renew_proposal(self,request):
         from disturbance.components.approvals.models import Approval
 
         if self.application_type.name == ApplicationType.SITE_TRANSFER:
+            #determine whether or not the approval was the recipient or originating approval
+
             approval = self.proposal_apiary.originating_approval
+            approval_id = request.GET.get('approval_id',None)
             if not approval:
                 raise ValidationError("Invalid proposal id provided for approval amendment/renewal.")
+
+            if approval.id != approval_id:
+                #if the originating id does not match the provided approval id - it must be the recipient
+                #we need to identify the correct proposal using details of that proposal from the provided approval
+                try:
+                    approval = Approval.objects.get(id=approval_id)
+                except:
+                    raise ValidationError("Invalid approval id provided for approval amendment/renewal.")
+                #TODO work out the best way to do this
+                #options might include applicant org or submitter but TECHNICALLY license COULD be transferred internally between the same org/submitter...
+            else:
+                #otherwise use those same details from the originating approval
+                pass
         
             return Proposal.objects.filter(approval=approval).exclude(application_type__name=ApplicationType.SITE_TRANSFER).order_by("id").last()
 
