@@ -838,7 +838,7 @@ export default {
         },
         proposedApproval: function(){
             let copiedProposedIssuanceApproval = helpers.copyObject(this.proposal.proposed_issuance_approval);
-            if (this.proposal.proposal_type == 'Renewal') {
+            if (copiedProposedIssuanceApproval != null && this.proposal.proposal_type == 'Renewal') {
                 copiedProposedIssuanceApproval.expiry_date = null;
             }
             this.$refs.proposed_approval.approval = this.proposal.proposed_issuance_approval != null ? copiedProposedIssuanceApproval : {};

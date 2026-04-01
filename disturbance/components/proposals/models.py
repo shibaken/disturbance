@@ -2698,6 +2698,14 @@ class Proposal(DirtyFieldsMixin, RevisionedMixin):
                     if not applicant:
                         proxy_applicant = self.proposal_apiary.transferee
 
+                    #if somehow we still have no applicant, use the approval applicant/proxy applicant (in case it had not been carried over)
+                    if not applicant and not proxy_applicant:
+                        proxy_applicant = approval.proxy_applicant
+                        applicant = approval.applicant 
+                        #last resort, use submitter
+                        if not applicant and not proxy_applicant:
+                            proxy_applicant = request.user
+
                     application_type = ApplicationType.objects.get(name=ApplicationType.APIARY)
                     qs_proposal_type = ProposalType.objects.all().order_by('name', '-version').distinct('name')
                     proposal_type = qs_proposal_type.get(name=application_type.name)
