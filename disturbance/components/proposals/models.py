@@ -2669,74 +2669,189 @@ class Proposal(DirtyFieldsMixin, RevisionedMixin):
             except:
                 raise
 
-    def get_latest_related_amend_renew_proposal(self):
+    def get_latest_related_amend_renew_proposal(self,request):
         from disturbance.components.approvals.models import Approval
 
         if self.application_type.name == ApplicationType.SITE_TRANSFER:
+            #determine whether or not the approval was the recipient or originating approval
+
             approval = self.proposal_apiary.originating_approval
+            try:
+                approval_id = int(request.GET.get('approval_id',None))
+            except:
+                raise ValidationError("Invalid approval id provided for approval amendment/renewal.")
+            
             if not approval:
                 raise ValidationError("Invalid proposal id provided for approval amendment/renewal.")
+
+            if approval.id != approval_id:
+                #if the originating id does not match the provided approval id - it must be the recipient
+                #we need to identify the correct proposal using details of that proposal from the provided approval
+                try:
+                    approval = Approval.objects.get(id=approval_id)
+                except:
+                    raise ValidationError("Invalid approval id provided for approval amendment/renewal.")
         
-            return Proposal.objects.filter(approval=approval).exclude(application_type__name=ApplicationType.SITE_TRANSFER).order_by("id").last()
+            return Proposal.objects.filter(approval=approval).exclude(application_type__name=ApplicationType.SITE_TRANSFER).exclude(processing_status=Proposal.PROCESSING_STATUS_DISCARDED).order_by("id").last()
 
-    def renew_approval(self,request):
+    def create_renewal_from_site_transferee(self, request):
+        #Create a new proposal to renew an approval without an existing previous proposal 
         with transaction.atomic():
-            previous_proposal = self
-            if previous_proposal.application_type and previous_proposal.application_type.name == "Site Transfer":
-                #if this application is a site transfer, set the previous proposal to last apiary proposal on the approval
-                previous_proposal = previous_proposal.get_latest_related_amend_renew_proposal()
-                if previous_proposal and previous_proposal != self:
-                    proposal = previous_proposal.renew_approval(request)
-                    return proposal
-                else:
-                    raise ValidationError("Approval has no valid proposal to renew with.")
-            
             try:
-                proposal=Proposal.objects.get(previous_application = previous_proposal)
-                if proposal.customer_status=='with_assessor':
-                    if not proposal.apiary_group_application_type:
-                        raise ValidationError('A renewal or amendment proposal for this approval has already been lodged and is awaiting review.')
+                proposal = None
+                if self.application_type.name == ApplicationType.SITE_TRANSFER:
+                    from disturbance.components.approvals.models import Approval
+                    
+                    approval_id = request.GET.get('approval_id',None)
+                    try:
+                        approval = Approval.objects.get(id=approval_id)
+                    except:
+                        raise ValidationError("Invalid approval id provided for approval amendment/renewal.")
+                    
+                    if self.proposal_apiary and self.proposal_apiary.target_approval == approval:
+                        applicant = self.proposal_apiary.target_approval_organisation
                     else:
-                        raise ValidationError('A renewal or amendment application for this licence has already been lodged and is awaiting review.')
-            except Proposal.DoesNotExist:
-                if previous_proposal.apiary_group_application_type:
-                    proposal = clone_apiary_proposal_with_status_reset(previous_proposal)
-                else:
-                    previous_proposal = Proposal.objects.get(id=self.id)
-                    proposal = clone_proposal_with_status_reset(previous_proposal)
-                    #proposal.schema = ProposalType.objects.first().schema
-                    # Commented Below - USE existing proposal_type for consistency - section names can change between ptype's particularly with schema gen tool
-                    #ptype = ProposalType.objects.filter(name=proposal.application_type).latest('version')
-                    #proposal.schema = ptype.schema
+                        raise ValidationError("Unable to identify applicant for Approval renewal")
 
-                proposal.proposal_type = 'renewal'
-                proposal.submitter = request.user
-                proposal.previous_application = self
-                if not previous_proposal.apiary_group_application_type:
-                    # for Apiary, we copy requirements in the clone method above
-                    req=self.requirements.all().exclude(is_deleted=True)
-                    from copy import deepcopy
+                    proxy_applicant = None
+                    if not applicant:
+                        proxy_applicant = self.proposal_apiary.transferee
+
+                    #if somehow we still have no applicant, use the approval applicant/proxy applicant (in case it had not been carried over)
+                    if not applicant and not proxy_applicant:
+                        proxy_applicant = approval.proxy_applicant
+                        applicant = approval.applicant 
+                        #last resort, use submitter
+                        if not applicant and not proxy_applicant:
+                            proxy_applicant = request.user
+
+                    application_type = ApplicationType.objects.get(name=ApplicationType.APIARY)
+                    qs_proposal_type = ProposalType.objects.all().order_by('name', '-version').distinct('name')
+                    proposal_type = qs_proposal_type.get(name=application_type.name)
+
+                    proposal = Proposal.objects.create(
+                        applicant=applicant,
+                        proxy_applicant=proxy_applicant,
+                        proposal_type=Proposal.APPLICATION_TYPE_CHOICES[2][0],
+                        application_type=application_type,
+                        schema=proposal_type.schema,
+                        submitter=request.user,
+                        approval=approval,
+                    )
+
+                    # create proposal_apiary and associate it with the proposal
+                    proposal_apiary = ProposalApiary.objects.create(proposal=proposal)
+                    proposal_apiary.save()
+
+                    proposal.customer_status = 'draft'
+                    proposal.processing_status = 'draft'
+                    proposal.assessor_data = None
+                    proposal.comment_data = None
+                    proposal.lodgement_number = ''
+                    proposal.lodgement_sequence = 0
+                    proposal.lodgement_date = None
+
+                    proposal.assigned_officer = None
+                    proposal.assigned_approver = None
+
+                    proposal.approval_level_document = None
+                    proposal.fee_invoice_references = []
+                    proposal.activity = 'Apiary Renewal'
+
+                    proposal.save(no_revision=True)
+
+                    req = approval.proposalrequirement_set.exclude(is_deleted=True)
                     if req:
                         for r in req:
-                            old_r = deepcopy(r)
+                            old_r = copy.deepcopy(r)
                             r.proposal = proposal
-                            r.copied_from=None
+                            r.apiary_approval = None
+                            r.copied_from=old_r
                             r.copied_for_renewal=True
                             if r.due_date:
                                 r.due_date=None
                                 r.require_due_date=True
                             r.id = None
                             r.save()
-                # Create a log entry for the proposal
-                self.log_user_action(ProposalUserAction.ACTION_RENEW_PROPOSAL.format(self.lodgement_number), request)
-                # Create a log entry for the organisation
-                if self.applicant:
-                    self.applicant.log_user_action(ProposalUserAction.ACTION_RENEW_PROPOSAL.format(self.lodgement_number), request)
-                #Log entry for approval
-                from disturbance.components.approvals.models import ApprovalUserAction
-                self.approval.log_user_action(ApprovalUserAction.ACTION_RENEW_APPROVAL.format(self.approval.lodgement_number), request)
-                proposal.save(version_comment='New Amendment/Renewal Proposal created, from origin {}'.format(proposal.previous_application_id))
-                #proposal.save()
+
+                    # update apiary_sites with new proposal
+                    approval.add_apiary_sites_to_proposal_apiary_for_renewal(proposal_apiary)
+
+                    # Checklist questions
+                    for question in ApiaryChecklistQuestion.objects.filter(
+                            checklist_type='apiary',
+                            checklist_role='applicant'
+                            ):
+                        ApiaryChecklistAnswer.objects.create(proposal = proposal.proposal_apiary, question = question)
+                    
+                return proposal 
+            except Exception as e:
+                print(e)
+                raise
+
+    def renew_approval(self,request):
+        with transaction.atomic():
+            previous_proposal = self
+            if previous_proposal.application_type and previous_proposal.application_type.name == "Site Transfer":
+                #if this application is a site transfer, set the previous proposal to last apiary proposal on the approval
+                previous_proposal = previous_proposal.get_latest_related_amend_renew_proposal(request)
+                if previous_proposal and previous_proposal != self:
+                    proposal = previous_proposal.renew_approval(request)
+                    return proposal
+
+            if previous_proposal:
+                #NOTE: this try except is explicitly designed to fail on first attempt as part of the renewal process - should be refactored to work more gracefully 
+                try:
+                    proposal=Proposal.objects.get(previous_application = previous_proposal)
+                    if proposal.customer_status=='with_assessor':
+                        if not proposal.apiary_group_application_type:
+                            raise ValidationError('A renewal or amendment proposal for this approval has already been lodged and is awaiting review.')
+                        else:
+                            raise ValidationError('A renewal or amendment application for this licence has already been lodged and is awaiting review.')
+                except Proposal.DoesNotExist:
+                    if previous_proposal.apiary_group_application_type:
+                        proposal = clone_apiary_proposal_with_status_reset(previous_proposal)
+                    else:
+                        previous_proposal = Proposal.objects.get(id=self.id)
+                        proposal = clone_proposal_with_status_reset(previous_proposal)
+                        #proposal.schema = ProposalType.objects.first().schema
+                        # Commented Below - USE existing proposal_type for consistency - section names can change between ptype's particularly with schema gen tool
+                        #ptype = ProposalType.objects.filter(name=proposal.application_type).latest('version')
+                        #proposal.schema = ptype.schema
+
+                    proposal.proposal_type = 'renewal'
+                    proposal.submitter = request.user
+                    proposal.previous_application = self
+                    if not previous_proposal.apiary_group_application_type:
+                        # for Apiary, we copy requirements in the clone method above
+                        req=self.requirements.all().exclude(is_deleted=True)
+                        from copy import deepcopy
+                        if req:
+                            for r in req:
+                                old_r = deepcopy(r)
+                                r.proposal = proposal
+                                r.copied_from=None
+                                r.copied_for_renewal=True
+                                if r.due_date:
+                                    r.due_date=None
+                                    r.require_due_date=True
+                                r.id = None
+                                r.save()
+                    # Create a log entry for the proposal
+                    self.log_user_action(ProposalUserAction.ACTION_RENEW_PROPOSAL.format(self.lodgement_number), request)
+                    # Create a log entry for the organisation
+                    if self.applicant:
+                        self.applicant.log_user_action(ProposalUserAction.ACTION_RENEW_PROPOSAL.format(self.lodgement_number), request)
+                    #Log entry for approval
+                    from disturbance.components.approvals.models import ApprovalUserAction
+                    self.approval.log_user_action(ApprovalUserAction.ACTION_RENEW_APPROVAL.format(self.approval.lodgement_number), request)
+                    proposal.save(version_comment='New Amendment/Renewal Proposal created, from origin {}'.format(proposal.previous_application_id))
+                    #proposal.save()
+            else:
+                #if we are here it means that no previous proposal exists, likely because the approval was created from a site transfer
+                if self.application_type.name == ApplicationType.SITE_TRANSFER:
+                    proposal = self.create_renewal_from_site_transferee(request)
+
             return proposal
 
     def amend_approval(self,request):
@@ -2744,13 +2859,14 @@ class Proposal(DirtyFieldsMixin, RevisionedMixin):
             previous_proposal = self
             if previous_proposal.application_type and previous_proposal.application_type.name == "Site Transfer":
                 #if this application is a site transfer, set the previous proposal to last apiary proposal on the approval
-                previous_proposal = previous_proposal.get_latest_related_amend_renew_proposal()
+                previous_proposal = previous_proposal.get_latest_related_amend_renew_proposal(request)
                 if previous_proposal and previous_proposal != self:
                     proposal = previous_proposal.amend_approval(request)
                     return proposal
                 else:
                     raise ValidationError("Approval has no valid proposal to amend with.")
-                
+            
+            #NOTE: this try except is explicitly designed to fail on first attempt as part of the renewal process - should be refactored to work more gracefully 
             try:
                 amend_conditions = {
                 'previous_application': previous_proposal,
@@ -2791,6 +2907,7 @@ class Proposal(DirtyFieldsMixin, RevisionedMixin):
                 self.approval.log_user_action(ApprovalUserAction.ACTION_AMEND_APPROVAL.format(self.approval.lodgement_number), request)
                 proposal.save(version_comment='New Amendment/Renewal Proposal created, from origin {}'.format(proposal.previous_application_id))
                 #proposal.save()
+
             return proposal
 
     def internal_view_log(self,request):
