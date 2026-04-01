@@ -780,7 +780,7 @@ class ApiarySiteViewSet(viewsets.ModelViewSet):
     #@query_debugger
     def list_existing_proposal_vacant_draft(self, request):
         qs_vacant_site_proposal, qs_vacant_site_approval = get_qs_vacant_site()
-        serializer_vacant_proposal_d = ApiarySiteOnacantDraftMinimalGeometrySerializer(qs_vacant_site_proposal.filter(wkb_geometry_processed__isnull=True), many=True)
+        serializer_vacant_proposal_d = ApiarySiteOnProposalVacantDraftMinimalGeometrySerializer(qs_vacant_site_proposal.filter(wkb_geometry_processed__isnull=True), many=True)
         return Response(serializer_vacant_proposal_d.data)
 
     @list_route(methods=['GET',])

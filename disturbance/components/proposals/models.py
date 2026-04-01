@@ -2661,7 +2661,11 @@ class Proposal(DirtyFieldsMixin, RevisionedMixin):
             #determine whether or not the approval was the recipient or originating approval
 
             approval = self.proposal_apiary.originating_approval
-            approval_id = request.GET.get('approval_id',None)
+            try:
+                approval_id = int(request.GET.get('approval_id',None))
+            except:
+                raise ValidationError("Invalid approval id provided for approval amendment/renewal.")
+            
             if not approval:
                 raise ValidationError("Invalid proposal id provided for approval amendment/renewal.")
 
