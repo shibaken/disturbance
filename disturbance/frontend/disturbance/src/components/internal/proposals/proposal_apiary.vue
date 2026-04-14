@@ -1181,7 +1181,7 @@ export default {
         },
         initialiseSelects: function(){
             let vm = this;
-            if (!vm.initialisedSelects){
+            if (!vm.initialisedSelects && vm.$refs.apiary_referral_groups){
                 $(vm.$refs.apiary_referral_groups).select2({
                     "theme": "bootstrap",
                     allowClear: true,
