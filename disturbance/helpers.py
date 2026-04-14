@@ -63,7 +63,8 @@ def is_approved_external_user(request):
     return False
 
 def is_departmentUser(request):
-    return request.user.is_authenticated() and ( (is_model_backend(request) and in_dbca_domain(request)) or is_approved_external_user(request) )
+    # return request.user.is_authenticated() and ( (is_model_backend(request) and in_dbca_domain(request)) or is_approved_external_user(request) )
+    return request.user.is_authenticated() and (in_dbca_domain(request) or is_approved_external_user(request))
 
 def is_customer(request):
     return request.user.is_authenticated() and is_email_auth_backend(request)
