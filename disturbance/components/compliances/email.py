@@ -69,6 +69,11 @@ class ComplianceReminderNotificationEmail(TemplateEmailBase):
     html_template = 'disturbance/emails/send_reminder_notification.html'
     txt_template = 'disturbance/emails/send_reminder_notification.txt'
 
+class ApiaryComplianceReminderNotificationEmail(TemplateEmailBase):
+    subject = 'Your Compliance with requirements has passed the due date.'
+    html_template = 'disturbance/emails/apiary_send_reminder_notification.html'
+    txt_template = 'disturbance/emails/apiary_send_reminder_notification.txt'
+
 class ComplianceInternalReminderNotificationEmail(TemplateEmailBase):
     subject = 'A Compliance with requirements has passed the due date.'
     html_template = 'disturbance/emails/send_internal_reminder_notification.html'
@@ -78,6 +83,11 @@ class ComplianceDueNotificationEmail(TemplateEmailBase):
     subject = 'Your Compliance with requirements is due for submission.'
     html_template = 'disturbance/emails/send_due_notification.html'
     txt_template = 'disturbance/emails/send_due_notification.txt'
+
+class ApiaryComplianceDueNotificationEmail(TemplateEmailBase):
+    subject = 'Your Compliance with requirements is due for submission.'
+    html_template = 'disturbance/emails/apiary_send_due_notification.html'
+    txt_template = 'disturbance/emails/apiary_send_due_notification.txt'
 
 class ComplianceInternalDueNotificationEmail(TemplateEmailBase):
     subject = 'A Compliance with requirements is due for submission.'
@@ -166,9 +176,9 @@ def send_reminder_email_notification(compliance):
 
 def send_apiary_reminder_email_notification(compliance):
     """ Used by the management command, therefore have no request object - therefore explicitly defining base_url """
-    email = ComplianceReminderNotificationEmail()
+    email = ApiaryComplianceReminderNotificationEmail()
     #url = request.build_absolute_uri(reverse('external-compliance-detail',kwargs={'compliance_pk': compliance.id}))
-    url=settings.SITE_URL if settings.SITE_URL else ''
+    url=settings.SITE_APIARY_URL if settings.SITE_APIARY_URL else ''
     url+=reverse('external-compliance-detail',kwargs={'compliance_pk': compliance.id})
     context = {
         'compliance': compliance,
@@ -272,9 +282,9 @@ def send_due_email_notification(compliance):
             _log_org_email(msg, compliance.proposal.applicant, compliance.submitter, sender=sender_user)
 
 def send_apiary_due_email_notification(compliance):
-    email = ComplianceDueNotificationEmail()
+    email = ApiaryComplianceDueNotificationEmail()
     #url = request.build_absolute_uri(reverse('external-compliance-detail',kwargs={'compliance_pk': compliance.id}))
-    url=settings.SITE_URL
+    url=settings.SITE_APIARY_URL if settings.SITE_APIARY_URL else ''
     url+=reverse('external-compliance-detail',kwargs={'compliance_pk': compliance.id})
     context = {
         'compliance': compliance,
