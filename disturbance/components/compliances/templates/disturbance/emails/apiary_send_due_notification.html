@@ -1,0 +1,33 @@
+{%  extends 'disturbance/emails/base_email_apiary.html' %}
+
+{%  block content %}
+
+	Your Compliance with requirements {{ compliance.reference }} is due for submission.
+    <p>
+		Region: {{proposal.region}}<br>
+		{% if proposal.district %}
+			District: {{proposal.district}}<br>
+		{% else %}
+			District: -<br>
+		{% endif %}
+        Approval No: {{ approval.lodgement_number}}<br>
+        Proposal No: {{proposal.lodgement_number}}<br>
+		Title: {{proposal.title}}<br>
+		Activity: {{proposal.activity}}<br>
+        Compliance No: {{ compliance.reference }} - {{ compliance.requirement.requirement }}<br>
+	</p>
+    <p>
+		Note:
+		<ul>
+			<li>Failure to submit this compliance requirement prior to the expiry date may result in your Approval being suspended.</li>
+			
+		</ul>
+	</p>
+   
+    <p>
+    You can access this Compliance using the following link:
+    </p>
+    <a href="{{url}}">Access Compliance</a>
+
+
+{%  endblock %}
