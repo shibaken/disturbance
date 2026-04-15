@@ -2221,15 +2221,24 @@ class ProposalViewSet(viewsets.ModelViewSet):
             raise serializers.ValidationError(str(e))
 
     @detail_route(methods=['GET',])
-    def renew_approval(self, request, *args, **kwargs):
+    def renew_approval(self, request, pk=None, *args, **kwargs):
         try:
-            instance = self.get_object()
-            instance = instance.renew_approval(request)
-            if instance.apiary_group_application_type:
-                serializer_class = self.internal_serializer_class()
-                serializer = serializer_class(instance,context={'request':request})
-            else:
-                serializer = SaveProposalSerializer(instance,context={'request':request})
+            #For this function we must authenticate based on the approval id provided, as site transfer applications are not accessible by transferees from which their approvals are created from
+            approval_id = request.GET.get('approval_id',None)
+
+            user_orgs = [org.id for org in self.request.user.disturbance_organisations.all()]
+            queryset =  Approval.objects.filter(id=approval_id).filter(Q(applicant_id__in = user_orgs)|Q(proxy_applicant_id=self.request.user.id))
+            if not queryset.exists() and not is_internal(request):
+                raise serializers.ValidationError("User not authorised to renew this Approval.")
+
+            instance = Proposal.objects.get(id=pk)
+            new_instance = instance.renew_approval(request)
+            serializer = SaveProposalSerializer(new_instance,context={'request':request})
+
+            #verify that the proposal is the new proposal that the user is allowed to access
+            if not (new_instance.applicant_id in user_orgs or new_instance.proxy_applicant_id == self.request.user.id or is_internal(request)):
+                raise serializers.ValidationError("User not authorised to access this Proposal.")
+
             return Response(serializer.data)
         except Exception as e:
             print(traceback.print_exc())
