@@ -1180,6 +1180,8 @@ export default {
             });
         },
         initialiseSelects: function(){
+            console.log("initialiseSelects")
+            console.log(this.canLimitedAction)
             let vm = this;
             if (!vm.initialisedSelects){
                 $(vm.$refs.apiary_referral_groups).select2({
@@ -1188,6 +1190,7 @@ export default {
                     placeholder:"Select Referral"
                 }).
                 on("select2:select",function (e) {
+                    console.log("select2:select")
                     var selected = $(e.currentTarget);
                     vm.selected_referral = selected.val();
                 }).
