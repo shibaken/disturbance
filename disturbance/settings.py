@@ -316,3 +316,4 @@ import json
 
 KMI_SERVER_URL = env('KMI_SERVER_URL', 'https://kmi.dbca.wa.gov.au')
 DEV_APP_BUILD_URL = env('DEV_APP_BUILD_URL')  # URL of the Dev app.js served by webpack & express
+DATA_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024 * 50  # 15M
