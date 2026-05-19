@@ -29,6 +29,10 @@ export default {
         referral_url: {
             type: String,
             default: null
+        },
+        isReferral: {
+            type: Boolean,
+            default: false
         }
     },
     data(){
@@ -82,15 +86,29 @@ export default {
                         data: 'id',
                         render: function (data,type,full) {
                             var result = '';
-                            if (!vm.canAction){
-                                return result;
-                            }
-                            var user = full.referral.first_name + ' ' + full.referral.last_name; 
-                            if (full.referral_status == 'Awaiting'){
-                                result = `<a href="" data-id="${data}" data-user="${user}" class="remindRef">Remind</a>/<a href="" data-id="${data}" data-user="${user}" class="recallRef">Recall</a>`;
+                            var has_access = false;
+                            // previous logic
+                            // if (!vm.canAction){
+                            //     return result;
+                            // }
+                            if(vm.isReferral){
+                                if (vm.canAction && full.sent_by === vm.proposal.current_assessor.id){
+                                    has_access = true;
+                                }
                             }
                             else{
-                                result = `<a href="" data-id="${data}" data-user="${user}" class="resendRef">Resend</a>`;
+                                if (vm.canAction){
+                                   has_access = true;
+                                }
+                            }
+                            if(has_access){
+                                var user = full.referral.first_name + ' ' + full.referral.last_name; 
+                                if (full.referral_status == 'Awaiting'){
+                                    result = `<a href="" data-id="${data}" data-user="${user}" class="remindRef">Remind</a>/<a href="" data-id="${data}" data-user="${user}" class="recallRef">Recall</a>`;
+                                }
+                                else{
+                                    result = `<a href="" data-id="${data}" data-user="${user}" class="resendRef">Resend</a>`;
+                                }
                             }
                             return result;
                         },
