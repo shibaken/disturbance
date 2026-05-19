@@ -914,7 +914,7 @@ export default {
         display: none;
     }
     #external_proposal {
-        margin-top: 30px !important;
+        margin-top: 20px !important;
         overflow: visible !important;
     }
     #external_proposal .row,
@@ -925,6 +925,10 @@ export default {
     .container {
         width: 100% !important;
         max-width: none !important;
+    }
+    @page {
+        margin-top: 70px !important;
+        margin-bottom: 70px !important;
     }
 
 } 
