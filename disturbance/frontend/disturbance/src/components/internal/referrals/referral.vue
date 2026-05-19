@@ -79,7 +79,9 @@
                                                     <small><strong>{{ formatDate(r.lodged_on) }}</strong></small>
                                                 </td>
                                                 <td><small><strong>{{r.processing_status}}</strong></small><br/>
-                                                <template v-if="!isFinalised && referral.referral == proposal.current_assessor.id">
+                                                <!-- Previous logic: <template v-if="!isFinalised && referral.referral == proposal.current_assessor.id"> -->
+                                                <!-- Keep referral rows visible, but only show actions for rows sent by current user. -->
+                                                <template v-if="canManageReferralActions(r)">
                                                     <template v-if="r.processing_status == 'Awaiting'">
                                                         <small><a @click.prevent="remindReferral(r)" href="#">Remind</a> / <a @click.prevent="recallReferral(r)" href="#">Recall</a></small>
                                                     </template>
@@ -91,7 +93,8 @@
                                             </tr>
                                         </tbody>
                                     </table>
-                                    <MoreReferrals @refreshFromResponse="refreshFromResponse" :proposal="proposal" :canAction="!isFinalised && referral.referral == proposal.current_assessor.id" :isFinalised="isFinalised" :referral_url="referralListURL"/>
+                                    <!-- Previous logic: :canAction="!isFinalised && referral.referral == proposal.current_assessor.id" -->
+                                    <MoreReferrals @refreshFromResponse="refreshFromResponse" :proposal="proposal" :canAction="canReferralActions" :isFinalised="isFinalised" :referral_url="referralListURL" :isReferral="true"/>
                                 </div>
                             </div>
                         </div>
@@ -336,11 +339,22 @@ export default {
         isFinalised: function(){
             return !(this.referral != null  && this.referral.processing_status == 'Awaiting'); 
         },
+        // Base permission for referral-side actions.
+        canReferralActions: function(){
+            // This page is action-enabled only for the active referral user while referral is awaiting.
+            return !this.isFinalised && this.referral.referral == this.proposal.current_assessor.id;
+        },
         // formatDate: function(data){
         //     return data ? moment(data).format('DD/MM/YYYY HH:mm:ss'): '';
         // }
     },
     methods: {
+        // Referral rows are always visible, but actions are only enabled for referrals sent by the current user.
+        canManageReferralActions: function(rowReferral){
+            // Previous logic:
+            // return !this.isFinalised && this.referral.referral == this.proposal.current_assessor.id;
+            return this.canReferralActions && rowReferral.sent_by === this.proposal.current_assessor.id;
+        },
         formatDate: function(data){
             return data ? moment(data).format('DD/MM/YYYY HH:mm:ss'): '';
         },
@@ -550,9 +564,12 @@ export default {
                 body: JSON.stringify(data)
             });
             })
-            .then(response => {
+            .then(async response => {
+            // if (!response.ok) {
+            //     throw new Error(`Referral send failed: ${response.status}`);
+            // }
             if (!response.ok) {
-                throw new Error(`Referral send failed: ${response.status}`);
+                throw new Error(await helpers.parseApiError(response));
             }
             return response.json();
             })
@@ -579,7 +596,7 @@ export default {
 
             swal.fire({
                 title: 'Referral Error',
-                text: error,
+                text: error.message || 'An error occurred while sending the referral.',
                 icon: 'error',
                 customClass: {
                     confirmButton: 'btn btn-primary',

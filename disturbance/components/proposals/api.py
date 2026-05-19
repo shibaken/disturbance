@@ -1896,7 +1896,17 @@ class ReferralViewSet(viewsets.ModelViewSet):
     def referral_list(self, request, *args, **kwargs):
         instance = self.get_object()
         qs = self.get_queryset().all()
-        qs=qs.filter(sent_by=instance.referral, proposal=instance.proposal)
+        # Previous logic:
+        # qs = qs.filter(sent_by=instance.referral, proposal=instance.proposal)
+        # first update logic
+        # Show both assessor-sent and referral-sent child referrals in referral view.
+        # This allows referral users to see assessor referrals as well
+        # qs = qs.filter(
+        #     sent_by__in=[instance.referral, instance.sent_by],
+        #     proposal=instance.proposal,
+        # ).exclude(id=instance.id)
+        # second update logic to show all referrals for the proposal except the current referral
+        qs = qs.filter(proposal=instance.proposal).exclude(id=instance.id)
         serializer = DTReferralSerializer(qs, many=True)
         #serializer = ProposalReferralSerializer(qs, many=True)
 

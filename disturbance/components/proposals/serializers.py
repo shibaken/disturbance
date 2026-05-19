@@ -678,6 +678,7 @@ class DTReferralSerializer(serializers.ModelSerializer):
             'referral_text',
             'template_group',
             'assigned_officer',
+            'sent_by',
         )
 
     def get_submitter(self,obj):

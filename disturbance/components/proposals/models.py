@@ -2731,7 +2731,17 @@ class Referral(models.Model):
     # Methods
     @property
     def latest_referrals(self):
-        return Referral.objects.filter(sent_by=self.referral, proposal=self.proposal)[:2]
+        # Show both referrals sent by this referral user and referrals sent by the assessor,
+        # but exclude the current referral record itself.
+        # Previous logic:
+        # return Referral.objects.filter(sent_by=self.referral, proposal=self.proposal)[:2]
+        # first update logic
+        # return Referral.objects.filter(
+        #     proposal=self.proposal,
+        #     sent_by__in=[self.referral, self.sent_by],
+        # ).exclude(id=self.id)[:2]
+        # second updated logic to show all referrals for the proposal except the current referral
+        return Referral.objects.filter(proposal=self.proposal).exclude(id=self.id)[:2]
 
     @property
     def can_be_completed(self):
@@ -2744,7 +2754,11 @@ class Referral(models.Model):
 
     def recall(self,request):
         with transaction.atomic():
-            if not self.proposal.can_assess(request.user):
+            # Sender can remind & assessors should also remind.
+            # Previous logic:
+            # if not self.proposal.can_assess(request.user):
+            #     raise exceptions.ProposalNotAuthorized()
+            if request.user != self.sent_by and not self.proposal.can_assess(request.user):
                 raise exceptions.ProposalNotAuthorized()
             self.processing_status = 'recalled'
             self.save()
@@ -2756,7 +2770,11 @@ class Referral(models.Model):
 
     def remind(self,request):
         with transaction.atomic():
-            if not self.proposal.can_assess(request.user):
+            # Sender can remind & assessors should also remind.
+            # Previous logic:
+            # if not self.proposal.can_assess(request.user):
+            #     raise exceptions.ProposalNotAuthorized()
+            if request.user != self.sent_by and not self.proposal.can_assess(request.user):
                 raise exceptions.ProposalNotAuthorized()
             # Create a log entry for the proposal
             self.proposal.log_user_action(ProposalUserAction.ACTION_REMIND_REFERRAL.format(self.id,self.proposal.lodgement_number,'{}({})'.format(self.referral.get_full_name(),self.referral.email)),request)
@@ -2767,7 +2785,11 @@ class Referral(models.Model):
 
     def resend(self,request):
         with transaction.atomic():
-            if not self.proposal.can_assess(request.user):
+            # Sender can remind & assessors should also remind.
+            # Previous logic:
+            # if not self.proposal.can_assess(request.user):
+            #     raise exceptions.ProposalNotAuthorized()
+            if request.user != self.sent_by and not self.proposal.can_assess(request.user):
                 raise exceptions.ProposalNotAuthorized()
             self.processing_status = 'with_referral'
             self.proposal.processing_status = 'with_referral'
