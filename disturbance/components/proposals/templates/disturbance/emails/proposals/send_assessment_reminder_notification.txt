@@ -21,8 +21,7 @@
 			Reminder notifications are sent every {{ assessment_reminder_days }} days until the status of a proposal progresses.
 			It is important an Assessor is ‘Assigned’ to a proposal ASAP.
 			To determine who is responsible for assessing a Proposal consult your local Assessor’s ‘Regional Ready Reckoner’ or discuss with the district or regional manager.
-			Please be aware DBCA states proposals are to be assessed and an approval decision made within 30-working days (from lodgment) unless significant amendments are required.
-			30-working days (from lodgment) unless significant amendments are required.
+			Please be aware DBCA states proposals are to be assessed and an approval decision made within 30-working days (from lodgement) unless significant amendments are required.
 			See <a href="{{ proposal_assess_help_page }}">DAS 06 how to assess a proposal</a> for full instructions.
 		
 
