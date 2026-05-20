@@ -1452,68 +1452,75 @@ export default {
             }
         },
         sendReferral: function(){
-            let vm = this;
-            //vm.save_wo();
-            vm.checkAssessorData();
-            let formData = new FormData(vm.form);
-            vm.sendingReferral = true;
+            if(this.checkAssignedOfficer()){
+                let vm = this;
+                //vm.save_wo();
+                vm.checkAssessorData();
+                let formData = new FormData(vm.form);
+                vm.sendingReferral = true;
 
-            // First POST: Save proposal form
-            fetch(vm.proposal_form_url, {
-            method: 'POST',
-            body: formData
-            })
-            .then(() => {
-            // Second POST: Send referral
-            const data = {
-                email: vm.selected_referral,
-                text: vm.referral_text
-            };
-
-            fetch(helpers.add_endpoint_json(api_endpoints.proposals, vm.proposal.id + '/assesor_send_referral'), {
+                // First POST: Save proposal form
+                fetch(vm.proposal_form_url, {
                 method: 'POST',
-                headers: {
-                'Content-Type': 'application/x-www-form-urlencoded' // emulateJSON
-                },
-                body: new URLSearchParams(data)
-            })
-            .then(response => response.json())
-            .then(response => {
-                vm.sendingReferral = false;
-                vm.original_proposal = helpers.copyObject(response);
-                vm.proposal = response;
-                vm.proposal.applicant.address = vm.proposal.applicant.address != null ? vm.proposal.applicant.address : {};
+                body: formData
+                })
+                .then(() => {
+                // Second POST: Send referral
+                const data = {
+                    email: vm.selected_referral,
+                    text: vm.referral_text
+                };
 
-                swal.fire({
-                    title: 'Referral Sent',
-                    text: 'The referral has been sent to ' + vm.selected_referral,
-                    icon: 'success',
-                    customClass: {
-                        confirmButton: 'btn btn-primary',
+                fetch(helpers.add_endpoint_json(api_endpoints.proposals, vm.proposal.id + '/assesor_send_referral'), {
+                    method: 'POST',
+                    headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded' // emulateJSON
                     },
-                });
+                    body: new URLSearchParams(data)
+                })
+                .then(async response => {
+                    if (!response.ok) {
+                        throw new Error(await helpers.parseApiError(response));
+                    }
+                    return response.json();
+                }) 
+                .then(response => {
+                    vm.sendingReferral = false;
+                    vm.original_proposal = helpers.copyObject(response);
+                    vm.proposal = response;
+                    vm.proposal.applicant.address = vm.proposal.applicant.address != null ? vm.proposal.applicant.address : {};
 
-                $(vm.$refs.department_users).val(null).trigger("change");
-                vm.selected_referral = '';
-                vm.referral_text = '';
-            })
-            .catch(error => {
-                console.log(error);
-                swal.fire({
-                    title: 'Referral Error',
-                    //text: helpers.apiVueResourceError(error),
-                    text:error,
-                    icon: 'error',
-                    customClass: {
-                        confirmButton: 'btn btn-primary',
-                    },
+                    swal.fire({
+                        title: 'Referral Sent',
+                        text: 'The referral has been sent to ' + vm.selected_referral,
+                        icon: 'success',
+                        customClass: {
+                            confirmButton: 'btn btn-primary',
+                        },
+                    });
+
+                    $(vm.$refs.department_users).val(null).trigger("change");
+                    vm.selected_referral = '';
+                    vm.referral_text = '';
+                })
+                .catch(error => {
+                    console.log(error);
+                    swal.fire({
+                        title: 'Referral Error',
+                        //text: helpers.apiVueResourceError(error),
+                        text: error.message || 'An error occurred while sending the referral.',
+                        icon: 'error',
+                        customClass: {
+                            confirmButton: 'btn btn-primary',
+                        },
+                    });
+                    vm.sendingReferral = false;
                 });
-                vm.sendingReferral = false;
-            });
-            })
-            .catch(err => {
-            console.log(err);
-            });
+                })
+                .catch(err => {
+                console.log(err);
+                });
+            }
 
         },
         remindReferral:function(r){
