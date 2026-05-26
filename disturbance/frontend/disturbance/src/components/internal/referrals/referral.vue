@@ -580,7 +580,7 @@ export default {
 
             swal.fire({
                 title: 'Referral Sent',
-                text: 'The referral has been sent to ' + vm.selected_referral,
+                text: 'The referral has been sent to ' + vm.selected_referral + '\nYou as a Referral will be able to Complete the Task once ' + vm.selected_referral + ' completes it',
                 icon: 'success',
                 customClass: {
                     confirmButton: 'btn btn-primary',
