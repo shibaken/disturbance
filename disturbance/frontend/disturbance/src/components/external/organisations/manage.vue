@@ -754,7 +754,7 @@ export default {
                             body: JSON.stringify(vm.contact_user)
                         }).then(async (response) => {
                             if (!response.ok) {
-                                throw new Error(`Contact Decline failed: ${response.status}`);
+                                throw new Error(await helpers.parseApiError(response));
                             }
                             swal.fire({
                                 title: 'Contact Decline',
@@ -770,8 +770,8 @@ export default {
                                 }
                             }).catch((error) => {
                                 swal.fire({
-                                    title:'Contact Decline',
-                                    text:'There was an error declining ' + name + '.',
+                                    title:'Contact Decline Error',
+                                    text: error.message || 'There was an error declining ' + name + '.',
                                     icon:'error',
                                     customClass: {
                                         confirmButton: 'btn btn-primary',
@@ -781,8 +781,8 @@ export default {
                             });
                         }, (error) => {
                             swal.fire({
-                                title:'Contact Decline',
-                                text:'There was an error declining ' + name + '.',
+                                title:'Contact Decline Error',
+                                text: error.message || 'There was an error declining ' + name + '.',
                                 icon:'error',
                                 customClass: {
                                     confirmButton: 'btn btn-primary',
@@ -903,7 +903,7 @@ export default {
                             body: JSON.stringify(vm.contact_user)
                         }).then(async (response) => {
                             if (!response.ok) {
-                                throw new Error(`Organisation Admin failed: ${response.status}`);
+                                throw new Error(await helpers.parseApiError(response));
                             }
                             swal.fire({
                                 title: 'Organisation Admin',
@@ -922,8 +922,8 @@ export default {
                             });
                         }).catch((error) => {
                             swal.fire({
-                                title:'Organisation Admin',
-                                text:'There was an error making ' + name + ' an Organisation Admin.',
+                                title:'Organisation Admin Error',
+                                text: error.message || 'There was an error making ' + name + ' an Organisation Admin.',
                                 icon:'error',
                                 customClass: {
                                     confirmButton: 'btn btn-primary',
@@ -970,7 +970,7 @@ export default {
                             body: JSON.stringify(vm.contact_user)
                         }).then(async (response) => {
                             if (!response.ok) {
-                                throw new Error(`Company Admin failed: ${response.status}`);
+                                throw new Error(await helpers.parseApiError(response));
                             }
                             swal.fire({
                                 title: 'Organisation User',
@@ -989,8 +989,8 @@ export default {
                             });
                         }).catch((error) => {
                             swal.fire({
-                                title:'Company Admin',
-                                text:'There was an error making ' + name + ' an Organisation User.',
+                                title:'Company Admin Error',
+                                text: error.message || 'There was an error making ' + name + ' an Organisation User.',
                                 icon:'error',  
                                 customClass: {
                                     confirmButton: 'btn btn-primary',
@@ -1036,7 +1036,7 @@ export default {
                             body: JSON.stringify(vm.contact_user)
                         }).then(async (response) => {
                             if (!response.ok) {
-                                throw new Error(`Suspend User failed: ${response.status}`);
+                                throw new Error(await helpers.parseApiError(response));
                             }
                             swal.fire({
                                 title: 'Suspend User',
@@ -1055,8 +1055,8 @@ export default {
                             });
                         }).catch((error) => {
                             swal.fire({
-                                title:'Suspend User',
-                                text:'There was an error suspending ' + name + ' as a User.',
+                                title:'Suspend User Error',
+                                text: error.message || 'There was an error suspending ' + name + ' as a User.',
                                 icon:'error',
                                 customClass: {
                                     confirmButton: 'btn btn-primary',
@@ -1102,7 +1102,7 @@ export default {
                             body: JSON.stringify(vm.contact_user)
                         }).then(async (response) => {
                             if (!response.ok) {
-                                throw new Error(`Reinstate User failed: ${response.status}`);
+                                throw new Error(await helpers.parseApiError(response));
                             }
                             swal.fire({
                                 title: 'Reinstate User',
@@ -1120,7 +1120,7 @@ export default {
                                 console.log('Swal error:'+error);
                             });
                         }).catch((error) => {
-                            swal.fire('Reinstate User','There was an error reinstating ' + name + '.','error',{
+                            swal.fire('Reinstate User Error', error.message || 'There was an error reinstating ' + name + '.','error',{
                                 customClass: {
                                     confirmButton: 'btn btn-primary',
                                 },
@@ -1165,7 +1165,7 @@ export default {
                             body: JSON.stringify(vm.contact_user)
                         }).then(async (response) => {
                             if (!response.ok) {
-                                throw new Error(`Relink User failed: ${response.status}`);
+                                throw new Error(await helpers.parseApiError(response));
                             }
                             swal.fire({
                                 title: 'Relink User',
@@ -1183,7 +1183,7 @@ export default {
                                 console.log('Swal error:'+error);
                             });
                         }).catch((error) => {
-                            swal.fire('Relink User','There was an error relink ' + name + '.','error',{
+                            swal.fire('Relink User Error', error.message || 'There was an error relinking ' + name + '.','error',{
                                 customClass: {
                                     confirmButton: 'btn btn-primary',
                                 },
