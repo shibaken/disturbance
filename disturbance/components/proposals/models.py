@@ -3130,13 +3130,15 @@ def search_sections(proposal_type_id, section_label,question_id,option_label,is_
     #print(application_type_name, section_label,question_label,option_label,is_internal)
     res_qs = []
     if is_internal:
-        if(not proposal_type_id or not section_label or not question_id or not option_label):
+        # if(not proposal_type_id or not section_label or not question_id or not option_label):
+        question=MasterlistQuestion.objects.get(id=question_id)
+        answer_type = question.answer_type
+        if(not proposal_type_id or not section_label or not question_id or (answer_type not in ['text', 'text_area'] and not option_label)):
             raise ValidationError('Some of the mandatory fields are missing')
         proposal_type=ProposalType.objects.get(id=proposal_type_id)
         proposal_type_name=proposal_type.name
         qs = Proposal.objects.filter(application_type__name=proposal_type_name, data__isnull=False).exclude(processing_status__in=[Proposal.PROCESSING_STATUS_DISCARDED, Proposal.PROCESSING_STATUS_DRAFT])
 
-        question=MasterlistQuestion.objects.get(id=question_id)
         filter_conditions={}
         if region:
             filter_conditions['region']=region
@@ -3146,7 +3148,6 @@ def search_sections(proposal_type_id, section_label,question_id,option_label,is_
             filter_conditions['activity']=activity
         if filter_conditions:
             qs=qs.filter(**filter_conditions)
-
         paginator = Paginator(qs, settings.QS_PAGINATOR_SIZE) # chunks
         for page_num in paginator.page_range:
             for p in paginator.page(page_num).object_list:
