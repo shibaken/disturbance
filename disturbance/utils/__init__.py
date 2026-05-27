@@ -643,13 +643,19 @@ def search_section(schema, section_label, question, data, answer):
             # #if flat_key has numbers at the end e.g. ProposalSummary0.Section0-0.0000, usually for multiselect answers.
             # if len(key_name[len(key_name.rstrip('0123456789')):])==4:
             #     key_name=key_name[:-5]
-
             if key_name.endswith(item['name']):
                 if flat_key[1].strip():
                     if question_type=='checkbox':
                         if 'on' in flat_key[1]:
                             found_fields.append( dict(key=item['label'], value=flat_key[1]) )
-                            break 
+                            break
+                    elif question_type=='text_area' or question_type=='text':
+                        if answer.strip()=="" and flat_key[1].lower()!="":
+                            found_fields.append( dict(key=item['label'], value=flat_key[1]) )
+                            break
+                        elif answer.strip()!="" and answer.strip().lower() in flat_key[1].lower():
+                            found_fields.append( dict(key=item['label'], value=flat_key[1]) )
+                            break
                     else: 
                         # if answer.replace(" ","").lower() in flat_key[1].lower():
                         if answer.strip().lower() in flat_key[1].lower():

@@ -408,12 +408,17 @@ export default {
 
         search: function() {
           let vm = this;
+          const selectedQuestion = vm.searchList(vm.selected_question, vm.questions);
+          const answerType = selectedQuestion.answer_type;
+          // make vm.selection_option madatory if questiontype is not text or text_area
+          const requiredSelectedOption = answerType !== 'text' && answerType !== 'text_area';
           // swal.fire(
           //         'Missing fields',
           //         'Please select all the mandatory fields',
           //         'error'
           //       );
-          if(!vm.selected_proposal_type_id || !vm.selected_section || !vm.selected_question || !vm.selected_option )
+          // if(!vm.selected_proposal_type_id || !vm.selected_section || !vm.selected_question || !vm.selected_option )
+          if(!vm.selected_proposal_type_id || !vm.selected_section || !vm.selected_question || (requiredSelectedOption && !vm.selected_option))
           {
             //console.log('here');
             swal.fire({
@@ -592,6 +597,7 @@ export default {
             vm.options = [];  
             vm.date_type=false;
             vm.select_type=false;
+            vm.selected_option = '';
             var found_question=this.searchList(question_id, vm.questions)
 
             //var api_options = this.searchList(question_name, vm.questions).options;
