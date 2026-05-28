@@ -1437,7 +1437,7 @@ export default {
                 console.log('Response: ' + JSON.stringify(res_body));
                 if (self.is_admin) {
 		            self.sqs_response = JSON.stringify(res_body, null, 4);
-                } else {
+                } else if (res_body.layer_data.length > 0) {
                     // summary response
                     let sqs_response_basic = res_body.layer_data[0].sqs_data
                     sqs_response_basic.section = res_body.layer_data[0].name
@@ -1456,8 +1456,8 @@ export default {
                 self.isModalOpen = true;
                 //self.close();
                 self.requesting = false;
-                self.num_questions = res_body['layer_data'].length;
-                self.num_layers_utilised = uniq(res_body['layer_data'].map((item) => item.layer_name)).length // unique layers used
+                self.num_questions = res_body['layer_data'] ? res_body['layer_data'].length : 0;
+                self.num_layers_utilised = res_body['layer_data'] ? uniq(res_body['layer_data'].map((item) => item.layer_name)).length : 0; // unique layers used
             }).catch(error => {
                 console.log('Error: ' + JSON.stringify(error))
                 swal.fire({
