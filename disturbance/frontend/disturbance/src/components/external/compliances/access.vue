@@ -42,14 +42,13 @@
                                 </div>
                             </div>
 
-                            <div class="row mb-3">
-                                <div v-if="hasDocuments">
+                            <div class="row mb-3" v-if="hasDocuments">
                                     <div class="col-sm-3 col-form-label pull-left" >  
                                         <label  for="Name">Documents:</label>
                                     </div> 
                                     <div class="col-sm-6">
-                                        <div class="row" v-for="d in compliance.documents" :key="d.id">
-                                            <a :href="d[1]" target="_blank" class="col-form-label pull-left">{{d[0]   }}</a>
+                                        <div class="d-flex align-items-center" v-for="d in compliance.documents" :key="d.id">
+                                            <a :href="d[1]" target="_blank" class="col-form-label pull-left me-2">{{ d[0] }}</a>
                                             <span v-if="!isFinalised && d.can_delete">
                                                 <a @click="delete_document(d)" class="fa fa-trash-o col-form-label" title="Remove file" style="cursor: pointer; color:red;"></a>
                                             </span>
@@ -58,7 +57,6 @@
                                             </span>
                                         </div>
                                     </div>
-                                </div>
                             </div>
 
                             <div v-if="!isFinalised">
