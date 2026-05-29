@@ -648,7 +648,7 @@ export default {
                 vm.fetchReferral(vm.referral.id);
                 swal.fire({
                     title: 'Referral Resent',
-                    text: 'The referral has been resent to '+r.referral,
+                    text: 'The referral has been resent to ' + r.referral + '\nYou as a Referral will be able to Complete the Task once ' + r.referral + ' completes it',
                     icon: 'success',
                     customClass: {
                         confirmButton: 'btn btn-primary',
