@@ -5,6 +5,8 @@ from django.shortcuts import redirect
 import re
 import datetime
 import logging
+import psutil
+import os
 
 from django.http import HttpResponseRedirect
 from django.utils import timezone
@@ -89,6 +91,23 @@ class CacheControlMiddleware(object):
             response['Cache-Control'] = 'public, max-age=86400'
         else:
             response['Cache-Control'] = 'private, no-store'
+        return response
+
+
+class MemoryTrackingMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        process = psutil.Process(os.getpid())
+        mem_before = process.memory_info().rss
+        
+        response = self.get_response(request)
+        
+        mem_after = process.memory_info().rss
+        mem_diff = (mem_after - mem_before) / (1024 * 1024) # in MB
+        
+        logger.info(f"Memory used by {request.path}: {mem_diff:.2f} MB")
         return response
 
 
