@@ -80,3 +80,4 @@ git+https://github.com/dbca-wa/webtemplate2.git#egg=webtemplate_dbca
 urllib3~=2.6.2
 sqlparse~=0.5.5
 telnetlib3~=2.0.8
+psutil==7.2.2
