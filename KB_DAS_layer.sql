@@ -8,7 +8,7 @@ ap.status AS appstatus,
  where ap2.lodgement_number = ap.lodgement_number) AS assocprop,
 pp.proposal_type AS proptype, 
 concat('/internal/proposal/', pp.id) AS propurl,
-pp.activity,pp.shapefile_geom AS geometry from disturbance_proposal pp LEFT JOIN disturbance_approval ap 
+pp.activity,ST_Transform(pp.shapefile_geom, 7844) AS geometry from disturbance_proposal pp LEFT JOIN disturbance_approval ap 
 ON ap.current_proposal_id = pp.id LEFT JOIN disturbance_organisation org ON org.id = pp.applicant_id 
 LEFT JOIN accounts_organisation lorg ON org.organisation_id = lorg.id 
 FULL JOIN disturbance_approval app ON ap.lodgement_number = app.lodgement_number 
