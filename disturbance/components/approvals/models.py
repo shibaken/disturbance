@@ -171,7 +171,7 @@ class Approval(RevisionedMixin):
         unique_together = ('lodgement_number', 'issue_date')
 
     def add_apiary_sites_to_proposal_apiary_for_renewal(self, proposal_apiary):
-        for apiary_site_on_approval in self.get_relations():
+        for apiary_site_on_approval in self.get_relations().exclude(site_status="denied"):
             ApiarySiteOnProposal.objects.create(
                 apiary_site=apiary_site_on_approval.apiary_site,
                 proposal_apiary=proposal_apiary,
