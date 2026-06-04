@@ -351,7 +351,10 @@ class ProposalPaginatedViewSet(viewsets.ModelViewSet):
         if applicant_id:
             qs = qs.filter(applicant_id=applicant_id)
 
-        self.paginator.page_size = qs.count()
+        # Keep the paginator bounded to the configured page size instead of
+        # returning the entire filtered queryset in one response.
+        # self.paginator.page_size = qs.count()
+        self.paginator.page_size = self.page_size
         result_page = self.paginator.paginate_queryset(qs, request)
         serializer = ListProposalSerializer(result_page, context={
             'request':request,
