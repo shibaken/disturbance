@@ -3238,7 +3238,8 @@ def get_search_geojson(proposal_lodgement_numbers,request):
     except:
         raise
 
-from django_ckeditor_5.fields import CKEditor5Field
+# from django_ckeditor_5.fields import CKEditor5Field
+from tinymce.models import HTMLField
 class HelpPage(models.Model):
     HELP_TEXT_EXTERNAL = 1
     HELP_TEXT_INTERNAL = 2
@@ -3248,7 +3249,8 @@ class HelpPage(models.Model):
     )
 
     application_type = models.ForeignKey(ApplicationType, on_delete=models.CASCADE)
-    content = CKEditor5Field()
+    # content = CKEditor5Field()
+    content = HTMLField()
     description = models.CharField(max_length=256, blank=True, null=True)
     help_type = models.SmallIntegerField('Help Type', choices=HELP_TYPE_CHOICES, default=HELP_TEXT_EXTERNAL)
     version = models.SmallIntegerField(default=1, blank=False, null=False)
@@ -3301,7 +3303,8 @@ class QuestionOption(models.Model):
     def __str__(self):
         return self.label 
 
-from django_ckeditor_5.fields import CKEditor5Field
+# from django_ckeditor_5.fields import CKEditor5Field
+from tinymce.models import HTMLField
 class MasterlistQuestion(models.Model):
     ANSWER_TYPE_CHECKBOX = 'checkbox'
     ANSWER_TYPE_RADIO = 'radiobuttons'
@@ -3347,8 +3350,8 @@ class MasterlistQuestion(models.Model):
     # help_text_assessor_url=models.CharField(max_length=400, blank=True, null=True)
     help_text_url=models.BooleanField(default=False)
     help_text_assessor_url=models.BooleanField(default=False)
-    help_text=CKEditor5Field(null=True, blank=True)
-    help_text_assessor=CKEditor5Field(null=True, blank=True)
+    help_text=HTMLField(null=True, blank=True)
+    help_text_assessor=HTMLField(null=True, blank=True)
     property_cache = JSONField(null=True, blank=True, default=dict)
 
     class Meta:

@@ -200,7 +200,8 @@ class ProposalStandardRequirementAdmin(admin.ModelAdmin):
 @admin.register(models.HelpPage)
 class HelpPageAdmin(admin.ModelAdmin):
     list_display = ['application_type','help_type', 'description', 'version']
-    form = forms.DisturbanceHelpPageAdminForm
+    # using tinymce for message field, this form is no longer needed
+    # form = forms.DisturbanceHelpPageAdminForm
     change_list_template = "disturbance/help_page_changelist.html"
     ordering = ('application_type', 'help_type', '-version')
     list_filter = ('application_type', 'help_type')

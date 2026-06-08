@@ -291,7 +291,8 @@ class SystemMaintenance(models.Model):
                                                                              self.start_date, self.end_date)
 
 
-from django_ckeditor_5.fields import CKEditor5Field
+# from django_ckeditor_5.fields import CKEditor5Field
+from tinymce.models import HTMLField
 
 class GlobalSettings(models.Model):
     KEY_ASSESSMENT_REMINDER_DAYS = 'assessment_reminder_days'
@@ -333,7 +334,8 @@ class GlobalSettings(models.Model):
     key = models.CharField(max_length=255, choices=keys, blank=False, null=False, unique=True)
     value = models.CharField(max_length=255)
     help_text_required=models.BooleanField(default=False)
-    help_text=CKEditor5Field(null=True, blank=True)
+    # help_text=CKEditor5Field(null=True, blank=True)
+    help_text=HTMLField(null=True, blank=True)
 
     class Meta:
         app_label = 'disturbance'
@@ -453,7 +455,7 @@ class JobQueue(models.Model):
     class Meta:
         app_label = 'disturbance' 
 
-
+from tinymce.models import HTMLField
 class Notice(models.Model):
 
     NOTICE_TYPE_CHOICES = (
@@ -464,7 +466,7 @@ class Notice(models.Model):
         )
 
     notice_type = models.IntegerField(choices=NOTICE_TYPE_CHOICES,default=0)
-    message = models.TextField(null=True, blank=True, default='')
+    message = HTMLField(null=True, blank=True, default='')
     order = models.IntegerField(default=1)
     active = models.BooleanField(default=True)
     created = models.DateTimeField(default=timezone.now)

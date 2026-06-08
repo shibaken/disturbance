@@ -43,10 +43,17 @@ import 'select2-bootstrap-5-theme/dist/select2-bootstrap-5-theme.min.css';
 import '@/../node_modules/datatables.net-bs5/css/dataTables.bootstrap5.min.css';
 import '@/../node_modules/datatables.net-responsive-bs5/css/responsive.bootstrap5.min.css';
 import '@/../node_modules/datatables.net-fixedcolumns-bs5/css/fixedColumns.bootstrap5.min.css';
-import 'summernote/dist/summernote';
-import 'summernote/dist/summernote.min.css';
-import 'summernote/dist/summernote-lite.min.css';
-import 'summernote/dist/summernote-lite.min.js';
+// import 'summernote/dist/summernote';
+// import 'summernote/dist/summernote.min.css';
+// import 'summernote/dist/summernote-lite.min.css';
+// import 'summernote/dist/summernote-lite.min.js';
+
+// Load TinyMCE globally from django-tinymce static files
+// This ensures both backend (Django admin) and frontend (Vue) use the same version
+const tinymceScript = document.createElement('script');
+tinymceScript.src = '/static/tinymce/tinymce.min.js';
+document.head.appendChild(tinymceScript);
+
 // import '@/../node_modules/font-awesome/css/font-awesome.min.css';
 
 
