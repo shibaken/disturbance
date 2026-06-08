@@ -4,7 +4,7 @@ from django.utils.html import format_html
 from django.urls import reverse
 from django.utils.html import strip_tags
 from django import forms
-from django_summernote.widgets import SummernoteWidget
+# from django_summernote.widgets import SummernoteWidget
 from ledger.accounts.models import EmailUser
 
 from disturbance.components.main.models import MapLayer, MapColumn, DASMapLayer, TaskMonitor, JobQueue, Notice
@@ -101,17 +101,17 @@ class JobQueueAdmin(admin.ModelAdmin):
     # user_name.short_description = 'User'
 
 
-class NoticeForm(forms.ModelForm):
-    message = forms.CharField(widget=SummernoteWidget(attrs={'summernote': {'toolbar': [['style', ['bold', 'italic', 'underline', 'strikethrough', 'fontsize']], ['insert', ['link']]]}}))
+# class NoticeForm(forms.ModelForm):
+#     message = forms.CharField(widget=SummernoteWidget(attrs={'summernote': {'toolbar': [['style', ['bold', 'italic', 'underline', 'strikethrough', 'fontsize']], ['insert', ['link']]]}}))
     
-    class Meta:
-        model = Notice
-        fields = '__all__'
+#     class Meta:
+#         model = Notice
+#         fields = '__all__'
 
 
 @admin.register(Notice)
 class NoticeAdmin(admin.ModelAdmin):
-    form = NoticeForm
+    # form = NoticeForm
     list_display = ('formatted_message', 'notice_type', 'order', 'created', 'active')
     readonly_fields = ['created',]
 

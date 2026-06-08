@@ -50,6 +50,8 @@
             "support_email": "{{ SUPPORT_EMAIL }}"
         }
     </script>
+    {# Load TinyMCE once globally from django-tinymce static files (shared by admin and Vue). #}
+    <script src="{% static 'tinymce/tinymce.min.js' %}"></script>
     {% vite_asset vue3_entry_script %}
 {% endblock custom_js %}
 

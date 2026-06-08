@@ -79,15 +79,37 @@ INSTALLED_APPS += [
     'rest_framework_gis',
     'reset_migrations',
     # 'ckeditor',
-    "django_ckeditor_5",
+    # "django_ckeditor_5",
     # 'corsheaders',
     'smart_selects',
     'crispy_forms',
     'appmonitor_client',
-    'django_summernote',
+    # 'django_summernote',
     "django_vite",
     'webtemplate_dbca',
+    'tinymce',
 ]
+
+TINYMCE_DEFAULT_CONFIG = {
+    "theme": "silver",
+    'height': 500,
+    'min_height': 500,
+    'max_height': 500,
+    "menubar": True,
+    "browser_spellcheck": True,
+    "language": "en_US",
+    "license_key": "gpl",
+    "plugins": "advlist,autolink,lists,link,image,charmap,preview,anchor,"
+    "searchreplace,visualblocks,insertdatetime,media,table,"
+    "help,wordcount,emoticons,codesample,nonbreaking,quickbars,autoresize",
+    "toolbar_mode": "sliding",
+    "toolbar": "undo redo | blocks | fontfamily fontsize | "
+    "bold italic underline strikethrough | forecolor backcolor | "
+    "alignleft aligncenter alignright alignjustify | "
+    "bullist numlist outdent indent | link image media table | "
+    "blockquote charmap emoticons codesample nonbreaking | "
+    "removeformat | preview | help",
+}
 
 ADD_REVERSION_ADMIN=True
 

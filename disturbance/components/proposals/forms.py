@@ -13,7 +13,7 @@ from disturbance.components.proposals.models import (
         SpatialQueryQuestion,
         )
 from disturbance.components.main.models import SystemMaintenance
-from django_ckeditor_5.widgets import CKEditor5Widget
+# from django_ckeditor_5.widgets import CKEditor5Widget
 from django.conf import settings
 import pytz
 from datetime import datetime, timedelta
@@ -93,12 +93,12 @@ class ProposalApproverGroupAdminForm(forms.ModelForm):
             except:
                 pass
 
-
-class DisturbanceHelpPageAdminForm(forms.ModelForm):
-    content = forms.CharField(widget=CKEditor5Widget())
-    class Meta:
-        model = HelpPage
-        fields = '__all__'
+# using tinymce for message field, this form is no longer needed
+# class DisturbanceHelpPageAdminForm(forms.ModelForm):
+#     content = forms.CharField(widget=CKEditor5Widget())
+#     class Meta:
+#         model = HelpPage
+#         fields = '__all__'
 
 
 class SystemMaintenanceAdminForm(forms.ModelForm):

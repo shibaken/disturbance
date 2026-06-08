@@ -131,7 +131,7 @@ urlpatterns = [
     #url(r'^admin/', disturbance_admin_site.urls),
     # url(r'^ledger/admin/', admin.site.urls, name='ledger_admin'),
     url(r'^chaining/', include('smart_selects.urls')),
-    url('summernote/', include('django_summernote.urls')),
+    # url('summernote/', include('django_summernote.urls')),
     url(r'', include(api_patterns)),
     url(r'^$', views.DisturbanceRoutingView.as_view(), name='ds_home'),
     url(r'^contact/', views.DisturbanceContactView.as_view(), name='ds_contact'),
@@ -176,7 +176,8 @@ urlpatterns = [
     url(r'^history/organisation/(?P<pk>\d+)/$', organisation_views.OrganisationHistoryCompareView.as_view(), name='organisation_history'),
     url(r'^template_group$', views.TemplateGroupView.as_view(), name='template-group'),
     url(r'^private-media/', views.getPrivateFile, name='view_private_file'),
-    url(r'^ckeditor5/', include('django_ckeditor_5.urls')),
+    # url(r'^ckeditor5/', include('django_ckeditor_5.urls')),
+    url(r'^tinymce/', include('tinymce.urls')),
 
     # Reports
     # url('kmi-proxy/(?P<path>.*)', views.kmiProxyView),
