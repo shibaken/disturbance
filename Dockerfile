@@ -1,4 +1,4 @@
-# syntax = docker/dockerfile:1.2
+# syntax = docker/dockerfile:1.7
 
 # Prepare the base environment.
 FROM ghcr.io/dbca-wa/docker-apps-dev:ubuntu_2510_base_python_node as builder_base_das
