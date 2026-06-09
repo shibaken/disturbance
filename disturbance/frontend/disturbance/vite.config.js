@@ -76,11 +76,11 @@ export default defineConfig(() => {
                         dest: 'node_modules/font-awesome',
                         rename: { stripBase: 2 },
                     },
-                    // {
-                    //     src: 'node_modules/summernote/dist/font',
-                    //     dest: 'node_modules/summernote/dist',
-                    //     rename: { stripBase: 3 },
-                    // },
+                    {
+                        src: 'node_modules/summernote/dist/font',
+                        dest: 'node_modules/summernote/dist',
+                        rename: { stripBase: 3 },
+                    },
                 ],
             }),
             analyze &&
