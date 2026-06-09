@@ -1,8 +1,3 @@
-<!--
-  This component is no longer used in active forms.
-  It has been replaced by the TinyMCE editor component.
-  Kept temporarily for legacy reference only.
--->
 <template>
   <div class="summernote-wrapper">
     <div ref="editor"></div>

@@ -81,8 +81,8 @@
                             <label class="col-form-label pull-left" >Rich Help Text</label>
                         </div>
                         <div class="col-md-9">
-                             <!-- <summernote v-model="masterlist.help_text" ></summernote> -->
-                             <tinymceEditor v-model="masterlist.help_text" :height="400" ></tinymceEditor>
+                             <summernote v-model="masterlist.help_text" ></summernote>
+                             <!-- <tinymceEditor v-model="masterlist.help_text" :height="400" ></tinymceEditor> -->
                         </div>
                     </div>
 
@@ -96,8 +96,8 @@
                             <label class="col-form-label pull-left" >Help Text assessor</label>
                         </div>
                         <div class="col-md-9">
-                             <!-- <summernote v-model="masterlist.help_text_assessor" ></summernote> -->
-                             <tinymceEditor v-model="masterlist.help_text_assessor" :height="400" ></tinymceEditor>
+                             <summernote v-model="masterlist.help_text_assessor" ></summernote>
+                             <!-- <tinymceEditor v-model="masterlist.help_text_assessor" :height="400" ></tinymceEditor> -->
                         </div>
                     </div>
 
@@ -117,8 +117,8 @@ import { v4 as uuidv4 } from 'uuid';
 import datatable from '@/utils/vue/datatable.vue'
 import modal from '@vue-utils/bootstrap-modal.vue'
 import SchemaOption from './schema_add_option.vue'
-// import summernote from '@/components/forms/summernote_editor.vue'
-import tinymceEditor from '@/components/forms/tinymce_editor.vue'
+import summernote from '@/components/forms/summernote_editor.vue'
+// import tinymceEditor from '@/components/forms/tinymce_editor.vue'
 import {
   api_endpoints,
   helpers,
@@ -131,8 +131,8 @@ export default {
         modal,
         datatable,
         SchemaOption,
-        // summernote,
-        tinymceEditor,
+        summernote,
+        // tinymceEditor,
         // SchemaHeader,
         // SchemaExpander,
     },
