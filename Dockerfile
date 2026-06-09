@@ -1,7 +1,7 @@
 # syntax = docker/dockerfile:1.7
 
 # Prepare the base environment.
-FROM ghcr.io/dbca-wa/docker-apps-dev:ubuntu_2510_base_python_node as builder_base_das
+FROM ghcr.io/dbca-wa/docker-apps-dev:ubuntu_2604_base_python_node as builder_base_das
 MAINTAINER asi@dbca.wa.gov.au
 ENV DEBIAN_FRONTEND=noninteractive
 ENV DEBUG=True
