@@ -1,0 +1,24 @@
+{%  extends 'disturbance/emails/base_email_apiary.txt' %}
+
+{%  block content %}
+    Your Compliance with requirements{{ compliance.reference }} has passed the due date and has not been lodged yet.
+    Region: {{proposal.region}}
+		{% if proposal.district %}
+			District: {{proposal.district}}
+		{% else %}
+			District: -
+		{% endif %}
+        Approval No: {{ approval.lodgement_number}}
+        Proposal No: {{proposal.lodgement_number}}
+		Title: {{proposal.title}}
+		Activity: {{proposal.activity}}
+        Compliance No: {{ compliance.reference }} - {{ compliance.requirement.requirement }}
+
+
+    
+    You can access this Compliance using the following link:
+    Failure to submit this compliance requirement prior to the expiry date may result in your Approval being suspended.
+    {{url}}
+
+
+{%  endblock %}

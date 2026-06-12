@@ -155,11 +155,25 @@ class ApiaryAnnualRentalFeePeriodStartDateAdmin(admin.ModelAdmin):
         return actions
 
 
+@admin.register(models.ProposalApiary)
+class ProposalApiaryAdmin(VersionAdmin):
+    list_display = ['id', 'proposal']
+
+
 @admin.register(models.Proposal)
 class ProposalAdmin(VersionAdmin):
     inlines =[ProposalDocumentInline,]
-    raw_id_fields = ('applicant','proxy_applicant','submitter','previous_application', 'assigned_officer', 'assigned_approver')
+    list_display = ['id', 'proposal_type', 'application_type', 'processing_status', 'proposal_apiary', 'approval', 'applicant', 'proxy_applicant', 'submitter', ]
+    raw_id_fields = ('applicant','proxy_applicant','submitter','previous_application', 'assigned_officer', 'assigned_approver', 'approval')
+    readonly_fields = ['approval_level_document']
+    list_filter = ['application_type',]
 
+@admin.register(models.ApiarySite)
+class ApiarySite(admin.ModelAdmin):
+    list_display = ['id', 'site_guid', 'latest_proposal_link', 'latest_approval_link', 'is_vacant', 'exempt_from_radius_restriction',]
+    readonly_fields = ['site_guid','is_vacant','latest_proposal_link','latest_approval_link','proposal_link_for_vacant','approval_link_for_vacant', 'coordinates']
+    search_fields = ['id']
+    list_filter = ['is_vacant', 'exempt_from_radius_restriction',]
 
 @admin.register(models.ProposalAssessorGroup)
 class ProposalAssessorGroupAdmin(admin.ModelAdmin):
@@ -481,13 +495,3 @@ class SectionQuestionAdmin(admin.ModelAdmin):
     list_display = ['section', 'question','order', 'parent_question','parent_answer']
     #list_display = ['section', 'question','parent_question',]
     form = forms.SectionQuestionAdminForm
-
-#@admin.register(models.SpatialQueryQuestion)
-#class SpatialQueryQuestionAdmin(admin.ModelAdmin):
-#    list_display = ['layer_name', 'how', 'column_name','operator', 'value']
-#    #fields = ['question', 'options']
-#    #list_display = ['question','answer_mlq', 'layer_name','how', 'column_name','operator', 'value']
-#    #list_display = ['section', 'question','parent_question',]
-#    #form = forms.SpatialQueryQuestionAdminForm
-
-   

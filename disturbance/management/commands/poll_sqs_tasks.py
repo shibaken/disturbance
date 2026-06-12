@@ -110,7 +110,8 @@ class Command(BaseCommand):
                                 update_retries(msg)
                             elif sqs_task['request_log']['request_type'] in [RequestTypeEnum.FULL, RequestTypeEnum.PARTIAL, RequestTypeEnum.REFRESH_SINGLE, RequestTypeEnum.REFRESH_PARTIAL]:
                                 request_type = sqs_task['request_log']['request_type']
-                                proposal, metrics_obj = self.prefill_proposal(sqs_task)
+                                # proposal, metrics_obj = self.prefill_proposal(sqs_task)
+                                proposal, metrics_obj = self.prefill_proposal(sqs_task, request_type)
                                 if proposal:
                                     task.status = TaskMonitor.STATUS_COMPLETED
                                     task.save()
@@ -199,7 +200,23 @@ class Command(BaseCommand):
             logger.error(msg)
             update_retries(msg)
 
-    def prefill_proposal(self, payload):
+    def update_layer_data(self, layer_data, new_layer_data):
+        layer_data_dict={}
+        if layer_data:
+            # Convert layer_data to a dictionary for easier updates
+            layer_data_dict = {layer['name']: layer for layer in layer_data}
+        for new_layer in new_layer_data:
+            name = new_layer['name']
+            if name in layer_data_dict:
+                # Update the existing entry
+                layer_data_dict[name].update(new_layer)
+            else:
+                # Add the new entry
+                layer_data_dict[name] = new_layer
+        # Convert back to list if needed
+        return list(layer_data_dict.values())
+
+    def prefill_proposal(self, payload, request_type):
         ''' Payload is the response from SQS API call, containing results from the shapefile/layer intersection 
         '''
         try:
@@ -216,7 +233,12 @@ class Command(BaseCommand):
             if res['data']:
                 proposal.data=res['data']
             if res['layer_data']:
-                proposal.layer_data=res['layer_data']
+                #Only replace the layer_data if it the request type is FULL else update or append the layer_data
+                if request_type == RequestTypeEnum.FULL:
+                    proposal.layer_data=res['layer_data']
+                else:
+                    updated_layer_data= self.update_layer_data(proposal.layer_data, res['layer_data'])
+                    proposal.layer_data=updated_layer_data
             if res['add_info_assessor']:
                 proposal.history_add_info_assessor = proposal.get_history_add_info_assessor()
                 #print(proposal.history_add_info_assessor)

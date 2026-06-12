@@ -219,7 +219,7 @@ class ApplicationType(models.Model):
 class ActivityMatrix(models.Model):
     # name = models.CharField(verbose_name='Activity matrix name', max_length=24, choices=application_type_choicelist(), default='Disturbance')
     name = models.CharField(verbose_name='Activity matrix name', max_length=24,
-                            choices=[('Disturbance', u'Disturbance')], default='Disturbance')
+                            choices=[('Disturbance', u'Disturbance'), ('Ecological Thinning', u'Ecological Thinning') ], default='Disturbance')
     description = models.CharField(max_length=256, blank=True, null=True)
     schema = JSONField()
     replaced_by = models.ForeignKey('self', on_delete=models.PROTECT, blank=True, null=True)
@@ -233,6 +233,16 @@ class ActivityMatrix(models.Model):
 
     def __str__(self):
         return '{} - v{}'.format(self.name, self.version)
+    
+    @property
+    def latest(self):
+        if self.name:
+            last_record=ActivityMatrix.objects.filter(name=self.name).order_by('-version')[0]
+            if last_record==self:
+                return True
+            else:
+                False
+        return False
 
 
 @python_2_unicode_compatible

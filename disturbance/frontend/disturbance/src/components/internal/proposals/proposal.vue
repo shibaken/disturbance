@@ -1,9 +1,17 @@
 <template lang="html">
+<div>
+    <template v-if="isLoading">
+            <div class="loading-container">
+                <div class="spinner"></div>
+                <p class="loading-text">Loading...</p>
+            </div>
+    </template>
     <div v-if="proposal" class="container" id="internalProposal">
 
         <template v-if="is_local">
             proposal.vue
         </template>
+        
       <div class="row">
         <h3 v-if="proposal.migrated">Proposal: {{ proposal.lodgement_number }} (Migrated)</h3>
         <h3 v-else>Proposal: {{ proposal.lodgement_number }}</h3>
@@ -389,8 +397,8 @@
         <ProposedApproval ref="proposed_approval" :processing_status="proposal.processing_status" :proposal_id="proposal.id" :proposal_type='proposal.proposal_type' :isApprovalLevelDocument="isApprovalLevelDocument" :submitter_email="proposal.submitter_email" :applicant_email="applicant_email" :relevant_applicant_address="proposal.applicant.address" :relevant_applicant_name="proposal.applicant.name" :reissued="proposal.reissued" @refreshFromResponse="refreshFromResponse"/>
     
 
-    
     </div>
+</div>
     
 </template>
 <script>
@@ -1098,6 +1106,13 @@ export default {
 
         toggleProposal:function(){
             this.showingProposal = !this.showingProposal;
+            let vm = this;
+            if (this.showingProposal) {
+                vm.$nextTick(() => {
+                    vm.contacts_table_initialised = false;
+                    vm.initialiseOrgContactTable();
+                });
+            }
         },
         toggleRequirements:function(){
             this.showingRequirements = !this.showingRequirements;
@@ -1580,6 +1595,7 @@ export default {
         // window.addEventListener('afterprint', this.afterPrinting);
     },
     created: function() {
+        this.loading.push('Loading Proposal')
         Vue.http.get(`/api/proposal/${this.proposalId}/internal_proposal.json`).then(res => {
             this.proposal = res.body;
             this.original_proposal = helpers.copyObject(res.body);
@@ -1589,9 +1605,11 @@ export default {
             if(this.reversion_history_length>1){
                 this.showHistory = true;
             }
+            this.loading.splice('Loading Proposal', 1);
         },
         err => {
           console.log(err);
+          this.loading.splice('Loading Proposal', 1);
         });
 
     },
@@ -1657,6 +1675,27 @@ export default {
 .noPrint { 
   display: none;
  }
-} 
+}
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #ccc;
+  border-top-color: #42b983;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 10px;
+}
+
+.loading-text {
+  font-size: 16px;
+  color: #555;
+  font-weight: 500;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 </style>

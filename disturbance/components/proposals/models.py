@@ -549,7 +549,8 @@ class Proposal(DirtyFieldsMixin, RevisionedMixin):
     migrated = models.BooleanField(default=False)
     shapefile_json = JSONField('Source/Submitter (multi) polygon geometry', blank=True, null=True)
     shapefile_geom = MultiPolygonField('Source/Submitter gdf.exploded (multi) polygon geometry', srid=4326, blank=True, null=True) # for 'pgsql2shp' from KB
-    reissued = models.BooleanField(default=False)
+    reissued = models.BooleanField(default=False)  
+    prefill_requested = models.BooleanField(default=False)           
 
     class Meta:
         app_label = 'disturbance'
@@ -778,6 +779,13 @@ class Proposal(DirtyFieldsMixin, RevisionedMixin):
                 return True        
         return False
     
+    @property
+    def has_prefilled_once(self):
+        """
+        :return: True if the application is atleast prefilled once. Otherwise, make the proposal readonly
+        """
+        return True if self.shapefile_json and self.prefill_timestamp else False
+
     @property
     def is_discardable(self):
         """
@@ -1528,6 +1536,30 @@ class Proposal(DirtyFieldsMixin, RevisionedMixin):
                 else:
                     # Proposal logic
                     return self.__assessor_group() in user.proposalassessorgroup_set.all()
+                
+    def draft_assessor_mode(self,user):
+        status_without_assessor = ['with_approver','approved','declined','with_assessor', 'discarded']
+        draft_status = ['draft']
+        if self.processing_status not in draft_status:
+            return False
+        else:
+            if self.assigned_officer:
+                if self.assigned_officer == user:
+                    if self.apiary_group_application_type:
+                        # Apiary logic
+                        return self.__assessor_group() in user.apiaryassessorgroup_set.all()
+                    else:
+                        # Proposal logic
+                        return self.__assessor_group() in user.proposalassessorgroup_set.all()
+                else:
+                    return False
+            else:
+                if self.apiary_group_application_type:
+                    # Apiary logic
+                    return self.__assessor_group() in user.apiaryassessorgroup_set.all()
+                else:
+                    # Proposal logic
+                    return self.__assessor_group() in user.proposalassessorgroup_set.all()
 
     def log_user_action(self, action, request):
         return ProposalUserAction.log_action(self, action, request.user)
@@ -1570,10 +1602,26 @@ class Proposal(DirtyFieldsMixin, RevisionedMixin):
                 #The features id has to be unique for each shapefile_json
                 if shapefile_json and 'features' in shapefile_json:
                     num_features = len(shapefile_json['features'])
+                    # Check for non-polygon geometries
+                    invalid_geom = []
+                    for idx, feature in enumerate(shapefile_json['features']):
+                        if 'geometry' in feature and feature['geometry']:
+                            geom_type = feature['geometry'].get('type', '').lower()
+                            if geom_type not in ['polygon', 'multipolygon']:
+                                invalid_geom.append({
+                                    'feature_index': idx,
+                                    'geometry_type': geom_type
+                                })
+                    
+                    if invalid_geom:
+                        invalid_types = ', '.join(set(g['geometry_type'] for g in invalid_geom))
+                        raise ValidationError(f'Shapefile contains non-polygon geometries: {invalid_types}. Only Polygon and MultiPolygon geometries are allowed.')
+                
                     if num_features > 0 and num_features <= MAX_NO_POLYGONS:
                         if 'id' in shapefile_json['features'][0]:
                             shapefile_json['features'][0]['id']=self.id
                         self.shapefile_json=shapefile_json
+                        self.prefill_requested=False
                     else:
                         msg = 'no features found in shapefile' if num_features == 0 else f'too many features: {num_features} (max {MAX_NO_POLYGONS})' 
                         raise ValidationError(f'Cannot upload a Shapefile - {msg}')
@@ -2621,60 +2669,204 @@ class Proposal(DirtyFieldsMixin, RevisionedMixin):
             except:
                 raise
 
-    def renew_approval(self,request):
-        with transaction.atomic():
-            previous_proposal = self
-            try:
-                proposal=Proposal.objects.get(previous_application = previous_proposal)
-                if proposal.customer_status=='with_assessor':
-                    if not proposal.apiary_group_application_type:
-                        raise ValidationError('A renewal or amendment proposal for this approval has already been lodged and is awaiting review.')
-                    else:
-                        raise ValidationError('A renewal or amendment application for this licence has already been lodged and is awaiting review.')
-            except Proposal.DoesNotExist:
-                if previous_proposal.apiary_group_application_type:
-                    proposal = clone_apiary_proposal_with_status_reset(previous_proposal)
-                else:
-                    previous_proposal = Proposal.objects.get(id=self.id)
-                    proposal = clone_proposal_with_status_reset(previous_proposal)
-                    #proposal.schema = ProposalType.objects.first().schema
-                    # Commented Below - USE existing proposal_type for consistency - section names can change between ptype's particularly with schema gen tool
-                    #ptype = ProposalType.objects.filter(name=proposal.application_type).latest('version')
-                    #proposal.schema = ptype.schema
+    def get_latest_related_amend_renew_proposal(self,request):
+        from disturbance.components.approvals.models import Approval
 
-                proposal.proposal_type = 'renewal'
-                proposal.submitter = request.user
-                proposal.previous_application = self
-                if not previous_proposal.apiary_group_application_type:
-                    # for Apiary, we copy requirements in the clone method above
-                    req=self.requirements.all().exclude(is_deleted=True)
-                    from copy import deepcopy
+        if self.application_type.name == ApplicationType.SITE_TRANSFER:
+            #determine whether or not the approval was the recipient or originating approval
+
+            approval = self.proposal_apiary.originating_approval
+            try:
+                approval_id = int(request.GET.get('approval_id',None))
+            except:
+                raise ValidationError("Invalid approval id provided for approval amendment/renewal.")
+            
+            if not approval:
+                raise ValidationError("Invalid proposal id provided for approval amendment/renewal.")
+
+            if approval.id != approval_id:
+                #if the originating id does not match the provided approval id - it must be the recipient
+                #we need to identify the correct proposal using details of that proposal from the provided approval
+                try:
+                    approval = Approval.objects.get(id=approval_id)
+                except:
+                    raise ValidationError("Invalid approval id provided for approval amendment/renewal.")
+        
+            return Proposal.objects.filter(approval=approval).exclude(application_type__name=ApplicationType.SITE_TRANSFER).exclude(processing_status=Proposal.PROCESSING_STATUS_DISCARDED).order_by("id").last()
+
+    def create_renewal_from_site_transferee(self, request):
+        #Create a new proposal to renew an approval without an existing previous proposal 
+        with transaction.atomic():
+            try:
+                proposal = None
+                if self.application_type.name == ApplicationType.SITE_TRANSFER:
+                    from disturbance.components.approvals.models import Approval
+                    
+                    approval_id = request.GET.get('approval_id',None)
+                    try:
+                        approval = Approval.objects.get(id=approval_id)
+                    except:
+                        raise ValidationError("Invalid approval id provided for approval amendment/renewal.")
+                    
+                    if self.proposal_apiary and self.proposal_apiary.target_approval == approval:
+                        applicant = self.proposal_apiary.target_approval_organisation
+                    else:
+                        raise ValidationError("Unable to identify applicant for Approval renewal")
+
+                    proxy_applicant = None
+                    if not applicant:
+                        proxy_applicant = self.proposal_apiary.transferee
+
+                    #if somehow we still have no applicant, use the approval applicant/proxy applicant (in case it had not been carried over)
+                    if not applicant and not proxy_applicant:
+                        proxy_applicant = approval.proxy_applicant
+                        applicant = approval.applicant 
+                        #last resort, use submitter
+                        if not applicant and not proxy_applicant:
+                            proxy_applicant = request.user
+
+                    application_type = ApplicationType.objects.get(name=ApplicationType.APIARY)
+                    qs_proposal_type = ProposalType.objects.all().order_by('name', '-version').distinct('name')
+                    proposal_type = qs_proposal_type.get(name=application_type.name)
+
+                    proposal = Proposal.objects.create(
+                        applicant=applicant,
+                        proxy_applicant=proxy_applicant,
+                        proposal_type=Proposal.APPLICATION_TYPE_CHOICES[2][0],
+                        application_type=application_type,
+                        schema=proposal_type.schema,
+                        submitter=request.user,
+                        approval=approval,
+                    )
+
+                    # create proposal_apiary and associate it with the proposal
+                    proposal_apiary = ProposalApiary.objects.create(proposal=proposal)
+                    proposal_apiary.save()
+
+                    proposal.customer_status = 'draft'
+                    proposal.processing_status = 'draft'
+                    proposal.assessor_data = None
+                    proposal.comment_data = None
+                    proposal.lodgement_number = ''
+                    proposal.lodgement_sequence = 0
+                    proposal.lodgement_date = None
+
+                    proposal.assigned_officer = None
+                    proposal.assigned_approver = None
+
+                    proposal.approval_level_document = None
+                    proposal.fee_invoice_references = []
+                    proposal.activity = 'Apiary Renewal'
+
+                    proposal.save(no_revision=True)
+
+                    req = approval.proposalrequirement_set.exclude(is_deleted=True)
                     if req:
                         for r in req:
-                            old_r = deepcopy(r)
+                            old_r = copy.deepcopy(r)
                             r.proposal = proposal
-                            r.copied_from=None
+                            r.apiary_approval = None
+                            r.copied_from=old_r
                             r.copied_for_renewal=True
                             if r.due_date:
                                 r.due_date=None
                                 r.require_due_date=True
                             r.id = None
                             r.save()
-                # Create a log entry for the proposal
-                self.log_user_action(ProposalUserAction.ACTION_RENEW_PROPOSAL.format(self.lodgement_number), request)
-                # Create a log entry for the organisation
-                if self.applicant:
-                    self.applicant.log_user_action(ProposalUserAction.ACTION_RENEW_PROPOSAL.format(self.lodgement_number), request)
-                #Log entry for approval
-                from disturbance.components.approvals.models import ApprovalUserAction
-                self.approval.log_user_action(ApprovalUserAction.ACTION_RENEW_APPROVAL.format(self.approval.lodgement_number), request)
-                proposal.save(version_comment='New Amendment/Renewal Proposal created, from origin {}'.format(proposal.previous_application_id))
-                #proposal.save()
+
+                    # update apiary_sites with new proposal
+                    approval.add_apiary_sites_to_proposal_apiary_for_renewal(proposal_apiary)
+
+                    # Checklist questions
+                    for question in ApiaryChecklistQuestion.objects.filter(
+                            checklist_type='apiary',
+                            checklist_role='applicant'
+                            ):
+                        ApiaryChecklistAnswer.objects.create(proposal = proposal.proposal_apiary, question = question)
+                    
+                return proposal 
+            except Exception as e:
+                print(e)
+                raise
+
+    def renew_approval(self,request):
+        with transaction.atomic():
+            previous_proposal = self
+            if previous_proposal.application_type and previous_proposal.application_type.name == "Site Transfer":
+                #if this application is a site transfer, set the previous proposal to last apiary proposal on the approval
+                previous_proposal = previous_proposal.get_latest_related_amend_renew_proposal(request)
+                if previous_proposal and previous_proposal != self:
+                    proposal = previous_proposal.renew_approval(request)
+                    return proposal
+
+            if previous_proposal:
+                #NOTE: this try except is explicitly designed to fail on first attempt as part of the renewal process - should be refactored to work more gracefully 
+                try:
+                    proposal=Proposal.objects.get(previous_application = previous_proposal)
+                    if proposal.customer_status=='with_assessor':
+                        if not proposal.apiary_group_application_type:
+                            raise ValidationError('A renewal or amendment proposal for this approval has already been lodged and is awaiting review.')
+                        else:
+                            raise ValidationError('A renewal or amendment application for this licence has already been lodged and is awaiting review.')
+                except Proposal.DoesNotExist:
+                    if previous_proposal.apiary_group_application_type:
+                        proposal = clone_apiary_proposal_with_status_reset(previous_proposal)
+                    else:
+                        previous_proposal = Proposal.objects.get(id=self.id)
+                        proposal = clone_proposal_with_status_reset(previous_proposal)
+                        #proposal.schema = ProposalType.objects.first().schema
+                        # Commented Below - USE existing proposal_type for consistency - section names can change between ptype's particularly with schema gen tool
+                        #ptype = ProposalType.objects.filter(name=proposal.application_type).latest('version')
+                        #proposal.schema = ptype.schema
+
+                    proposal.proposal_type = 'renewal'
+                    proposal.submitter = request.user
+                    proposal.previous_application = self
+                    if not previous_proposal.apiary_group_application_type:
+                        # for Apiary, we copy requirements in the clone method above
+                        req=self.requirements.all().exclude(is_deleted=True)
+                        from copy import deepcopy
+                        if req:
+                            for r in req:
+                                old_r = deepcopy(r)
+                                r.proposal = proposal
+                                r.copied_from=None
+                                r.copied_for_renewal=True
+                                if r.due_date:
+                                    r.due_date=None
+                                    r.require_due_date=True
+                                r.id = None
+                                r.save()
+                    # Create a log entry for the proposal
+                    self.log_user_action(ProposalUserAction.ACTION_RENEW_PROPOSAL.format(self.lodgement_number), request)
+                    # Create a log entry for the organisation
+                    if self.applicant:
+                        self.applicant.log_user_action(ProposalUserAction.ACTION_RENEW_PROPOSAL.format(self.lodgement_number), request)
+                    #Log entry for approval
+                    from disturbance.components.approvals.models import ApprovalUserAction
+                    self.approval.log_user_action(ApprovalUserAction.ACTION_RENEW_APPROVAL.format(self.approval.lodgement_number), request)
+                    proposal.save(version_comment='New Amendment/Renewal Proposal created, from origin {}'.format(proposal.previous_application_id))
+                    #proposal.save()
+            else:
+                #if we are here it means that no previous proposal exists, likely because the approval was created from a site transfer
+                if self.application_type.name == ApplicationType.SITE_TRANSFER:
+                    proposal = self.create_renewal_from_site_transferee(request)
+
             return proposal
 
     def amend_approval(self,request):
         with transaction.atomic():
             previous_proposal = self
+            if previous_proposal.application_type and previous_proposal.application_type.name == "Site Transfer":
+                #if this application is a site transfer, set the previous proposal to last apiary proposal on the approval
+                previous_proposal = previous_proposal.get_latest_related_amend_renew_proposal(request)
+                if previous_proposal and previous_proposal != self:
+                    proposal = previous_proposal.amend_approval(request)
+                    return proposal
+                else:
+                    raise ValidationError("Approval has no valid proposal to amend with.")
+            
+            #NOTE: this try except is explicitly designed to fail on first attempt as part of the renewal process - should be refactored to work more gracefully 
             try:
                 amend_conditions = {
                 'previous_application': previous_proposal,
@@ -2715,6 +2907,7 @@ class Proposal(DirtyFieldsMixin, RevisionedMixin):
                 self.approval.log_user_action(ApprovalUserAction.ACTION_AMEND_APPROVAL.format(self.approval.lodgement_number), request)
                 proposal.save(version_comment='New Amendment/Renewal Proposal created, from origin {}'.format(proposal.previous_application_id))
                 #proposal.save()
+
             return proposal
 
     def internal_view_log(self,request):
@@ -3295,6 +3488,7 @@ def delete_documents(sender, instance, *args, **kwargs):
         document.delete()
 
 def clone_proposal_with_status_reset(proposal):
+        import shutil
         with transaction.atomic():
             try:
                 proposal.customer_status = 'draft'
@@ -3330,13 +3524,34 @@ def clone_proposal_with_status_reset(proposal):
                 for proposal_document in ProposalDocument.objects.filter(proposal=original_proposal_id):
                     proposal_document.proposal = proposal
                     proposal_document.id = None
-                    proposal_document._file.name = u'proposals/{}/documents/{}'.format(proposal.id, proposal_document.name)
+                    # proposal_document._file.name = u'proposals/{}/documents/{}'.format(proposal.id, proposal_document.name)
+                    proposal_document._file.name = u'proposals/{}/documents/{}'.format(proposal.id, proposal_document.filename)
                     proposal_document.can_delete = True
                     proposal_document.save()
+                
+                for proposal_map_document in ProposalMapDocument.objects.filter(proposal=original_proposal_id):
+                    proposal_map_document.proposal = proposal
+                    proposal_map_document.id = None
+                    # proposal_document._file.name = u'proposals/{}/documents/{}'.format(proposal.id, proposal_document.name)
+                    proposal_map_document._file.name = u'proposals/{}/documents/map_docs/{}'.format(proposal.id, proposal_document.filename)
+                    proposal_map_document.input_name = u'proposal_{}_map_doc'.format(proposal.id)
+                    proposal_map_document.can_delete = True
+                    proposal_map_document.save()
 
                 # copy documents on file system and reset can_delete flag
-                subprocess.call('cp -pr media/proposals/{} media/proposals/{}'.format(original_proposal_id, proposal.id), shell=True)
+                #subprocess.call('cp -pr media/proposals/{} media/proposals/{}'.format(original_proposal_id, proposal.id), shell=True)
+                source_dir = os.path.join(private_storage.location, f'proposals/{original_proposal_id}')
+                dest_dir = os.path.join(private_storage.location, f'proposals/{proposal.id}')
+                
+                # Remove destination if it exists
+                if os.path.exists(dest_dir):
+                    shutil.rmtree(dest_dir)
 
+                # Copy the directory
+                if os.path.exists(source_dir):
+                    shutil.copytree(source_dir, dest_dir)
+                else:
+                    os.makedirs(dest_dir)
                 return proposal
             except:
                 raise
@@ -3762,16 +3977,17 @@ class ProposalApiary(RevisionedMixin):
 
         # Check the distance among the requested sites
         for apiary_site in self.apiary_sites.all():
-            relation = self.get_relation(apiary_site)
-            # Check among the apiary sites in this proposal except current one of the loop
-            q_objects = Q(apiary_site__in=self.apiary_sites.all())
-            q_objects &= Q(wkb_geometry_draft__distance_lte=(relation.wkb_geometry_draft, Distance(m=RESTRICTED_RADIUS)))
-            qs_sites_within = ApiarySiteOnProposal.objects.filter(q_objects).exclude(apiary_site=apiary_site)
-            if qs_sites_within:
-                # In this proposal, there are apiary sites which are too close to each other
-                if raise_exception:
-                    # raise serializers.ValidationError(['There are apiary sites in this proposal which are too close to each other.',])
-                    raise ValidationError('There are apiary sites in this proposal which are too close to each other.')
+            if not apiary_site.exempt_from_radius_restriction:
+                relation = self.get_relation(apiary_site)
+                # Check among the apiary sites in this proposal except current one of the loop
+                q_objects = Q(apiary_site__in=self.apiary_sites.all())
+                q_objects &= Q(wkb_geometry_draft__distance_lte=(relation.wkb_geometry_draft, Distance(m=RESTRICTED_RADIUS)))
+                qs_sites_within = ApiarySiteOnProposal.objects.filter(q_objects).exclude(apiary_site=apiary_site)
+                if qs_sites_within:
+                    # In this proposal, there are apiary sites which are too close to each other
+                    if raise_exception:
+                        # raise serializers.ValidationError(['There are apiary sites in this proposal which are too close to each other.',])
+                        raise ValidationError('There are apiary sites in this proposal which are too close to each other.')
                 validity = False
 
         return validity
@@ -4447,6 +4663,7 @@ class ProposalApiary(RevisionedMixin):
                         ProposalUserAction.ACTION_UPDATE_APPROVAL_FOR_PROPOSAL.format(
                             target_approval.lodgement_number,
                             self.proposal.id), request)
+
                     # Log entry for organisation
                     if self.proposal.applicant:
                         self.proposal.applicant.log_user_action(
@@ -4871,6 +5088,8 @@ class ApiarySite(models.Model):
     approval_link_for_vacant = models.ForeignKey('disturbance.ApiarySiteOnApproval', blank=True, null=True, related_name='vacant_apiary_site', on_delete=models.SET_NULL)
     is_vacant = models.BooleanField(default=False)
 
+    exempt_from_radius_restriction = models.BooleanField(default=False) #does not require restricted radius validation on proposal
+
     def get_relevant_applicant_name(self):
         relevant_name = ''
 
@@ -4936,6 +5155,30 @@ class ApiarySite(models.Model):
     def get_current_application_fee_per_site(self):
         current_fee = self.site_category.current_application_fee_per_site
         return current_fee
+
+    #latest relevant coords
+    @property
+    def coordinates(self):
+        latest_link = None
+        latest_link_date = None
+
+        if self.latest_proposal_link and self.latest_proposal_link.wkb_geometry_processed:
+            latest_link_date = self.latest_proposal_link.created_at
+            latest_link = self.latest_proposal_link.wkb_geometry_processed.coords
+
+        if self.latest_approval_link and self.latest_approval_link.wkb_geometry and (not latest_link_date or self.latest_approval_link.created_at >= latest_link_date):
+            latest_link_date = self.latest_approval_link.created_at
+            latest_link = self.latest_approval_link.wkb_geometry.coords
+
+        if self.proposal_link_for_vacant and self.latest_proposal_link.wkb_geometry_processed and (not latest_link_date or self.proposal_link_for_vacant.created_at >= latest_link_date):
+            latest_link_date = self.proposal_link_for_vacant.created_at
+            latest_link = self.proposal_link_for_vacant.wkb_geometry_processed.coords
+
+        if self.approval_link_for_vacant and self.latest_approval_link.wkb_geometry and (not latest_link_date or self.approval_link_for_vacant.created_at >= latest_link_date):
+            latest_link_date = self.approval_link_for_vacant.created_at
+            latest_link = self.approval_link_for_vacant.wkb_geometry.coords
+
+        return latest_link
 
     class Meta:
         app_label = 'disturbance'

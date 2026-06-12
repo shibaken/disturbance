@@ -529,7 +529,8 @@ def send_approver_approve_email_notification(request, proposal):
         'proposal': proposal,
         'url': url,
         'assessor_name': assessor_name,
-        'greeting': 'Assessor',
+        # 'greeting': 'Assessor',
+        'greeting': 'Approver',
         'proposal_approver_help_page': get_proposal_approver_help_url(),
         'assessor_footer': True,
         'DAS_sharepoint_page': get_das_sharepoint_url(),
@@ -647,10 +648,8 @@ def send_site_transfer_approval_email_notification(proposal, request, approval):
     all_ccs = []
     if cc_list:
         all_ccs = cc_list.split(',')
-    #if proposal.applicant:
-    if proposal.applicant and proposal.applicant.email != proposal.submitter.email and proposal.applicant.email:
-     #   if proposal.applicant.email:
-            all_ccs.append(proposal.applicant.email)
+
+    relevant_applicant_email = approval.relevant_applicant_email
 
     licence_document= approval.licence_document._file
     if licence_document is not None:
@@ -660,13 +659,12 @@ def send_site_transfer_approval_email_notification(proposal, request, approval):
     else:
         attachment = []
 
-    #msg = email.send(proposal.submitter.email, bcc= all_ccs, attachments=attachment, context=context)
-    msg = email.send(approval.relevant_applicant_email, bcc= all_ccs, attachments=attachment, context=context)
-    #sender = request.user if request else settings.DEFAULT_FROM_EMAIL
-    sender = get_sender_user()
-    _log_proposal_email(msg, proposal, sender=sender)
-    if proposal.applicant:
-        _log_org_email(msg, proposal.applicant, proposal.submitter, sender=sender)
+    if relevant_applicant_email:
+        msg = email.send(approval.relevant_applicant_email, bcc= all_ccs, attachments=attachment, context=context)
+        sender = get_sender_user()
+        _log_proposal_email(msg, proposal, sender=sender)
+        if approval.applicant and approval.applicant.organisation and hasattr(approval.applicant.organisation, 'email') and approval.applicant.organisation.email:
+            _log_org_email(msg, approval.applicant, proposal.submitter, sender=sender)
 
 def send_assessment_reminder_email_notification(proposal):
     if proposal.apiary_group_application_type:
@@ -745,7 +743,7 @@ def send_proposal_prefill_error_email_notification(proposal, user, task_id):
     context = {
         'proposal': proposal,
         'task_id': task_id,
-        'greeting': 'Assessor',
+        #'greeting': 'Assessor',
         'url': url,
     }
 

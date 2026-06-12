@@ -3,8 +3,19 @@
         <template v-if="is_local">
             proposal_external.vue
         </template>
+        <template v-if="isLoading">
+            <div class="loading-container">
+                <div class="spinner"></div>
+                <p class="loading-text">Loading...</p>
+            </div>
+        </template>
         <form :action="proposal_form_url" method="post" name="new_proposal" enctype="multipart/form-data">
             <div v-if="!proposal_readonly">
+                <div v-if="!proposal.apiary_group_application_type && !proposal.shapefile_json" class="row">
+                    <div class="col-lg-12 alert alert-danger" >
+                        <alert type="danger"><strong>Your Proposal is currently missing a shapefile. Please upload a shapefile, validate and prefill the Proposal</strong></alert>
+                    </div>
+                </div>
               <div v-if="hasAmendmentRequest" class="row" style="color:red;">
                 <div class="col-lg-12 pull-right">
                     <div class="panel panel-default">
@@ -722,7 +733,7 @@ export default {
                 }
 
                 if (this.type == 'textarea') {
-                    if (this.value == '') {
+                    if (this.value.trim() == '') {
                         var text = $('#'+id).text()
                         console.log('textarea not provided: ' + this.type + ' ' + this.name)
                         vm.missing_fields.push({id: id, label: text});
@@ -825,7 +836,8 @@ export default {
                     blank_fields.push(' You must select at least one site to transfer')
                 }
              }
-             else{
+             //else{
+             if(vm.proposal.application_type == 'Disturbance'){
                 if((!vm.proposal.region) || (!vm.proposal.district) || (vm.proposal.approval_level=='')) {
                     if(vm.$refs.proposal_apply.sub_activities1.length>0 && vm.proposal.sub_activity_level1=='') {
                         blank_fields.push('Sub Activity-1 cannot be blank')
@@ -895,6 +907,21 @@ export default {
             }
             vm.highlight_deficient_fields(deficient_fields);
         },
+        checkMapFiles:function(){
+            let vm=this;
+            let blank_fields = []
+            if(vm.proposal.application_type == 'Disturbance'){
+                if(vm.proposal && vm.$refs.mapSection.$refs.map_doc.documents.length == 0 || vm.proposal.shapefile_json==null || vm.proposal.prefill_requested == false){
+                    blank_fields.push(' You must upload and validate the shapefile. Please Prefill the Proposal after validating the shapefile.');
+                }
+             }
+            if(blank_fields.length==0){
+                return true;
+            }
+            else {
+                return blank_fields;
+            }
+        },
 
         submit: function(){
 
@@ -906,7 +933,31 @@ export default {
             let formData = new FormData(vm.form);
             // Add apiary_sites data if needed
             formData = this.attach_apiary_sites_data(formData)
+            
+            //Check for missing map documents
+            let missing_files = vm.checkMapFiles();
+            if(missing_files!=true){
+              swal({
+                title: "Please fix following errors before submitting",
+                text: missing_files,
+                type:'error'
+              })
+            //vm.paySubmitting=false;
+            return false;
+            }
 
+            //Check for missing data in Required fields on the form
+            var num_missing_fields = vm.validate()
+            if (num_missing_fields > 0) {
+                vm.highlight_missing_fields()
+                var top = ($('#error').offset() || { "top": NaN }).top;
+                $('html, body').animate({
+                    scrollTop: top
+                }, 1);
+                return false;
+            }
+
+            //Check for missing data in Region, District, Category/Management Area
             let missing_data = vm.can_submit();
             if(missing_data!=true){
               swal({
@@ -916,16 +967,6 @@ export default {
               })
             //vm.paySubmitting=false;
             return false;
-            }
-
-            var num_missing_fields = vm.validate()
-            if (num_missing_fields > 0) {
-                vm.highlight_missing_fields()
-                var top = ($('#error').offset() || { "top": NaN }).top;
-                $('html, body').animate({
-                    scrollTop: top
-                }, 1);
-                return false;
             }
 
             // remove the confirm prompt when navigating away from window (on button 'Submit' click)
@@ -1133,13 +1174,14 @@ export default {
         let proposal_id = this.$route.params.proposal_id
 
         let vm = this;
+        vm.loading.push('Loading Proposal')
         Vue.http.get(`/api/proposal/${ proposal_id }.json`).then(
             res => {
-                vm.loading.push('fetching proposal')
+                // vm.loading.push('fetching proposal')
                 vm.proposal = res.body;
                 console.log('vm.proposal')
                 console.log(vm.proposal)
-                vm.loading.splice('fetching proposal', 1);
+                vm.loading.splice('Loading Proposal', 1);
                 vm.setdata(vm.proposal.readonly);
 
                 Vue.http.get(helpers.add_endpoint_json(api_endpoints.proposals, proposal_id + '/amendment_request')).then((res) => {
@@ -1151,6 +1193,7 @@ export default {
             },
             err => {
                 console.log(err);
+                vm.loading.splice('Loading Proposal', 1);
             }
         );
         // retrieve template group
@@ -1208,6 +1251,35 @@ export default {
 
 .swal2-container {
   z-index: 9999 !important;
+}
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px; /* Optional: adjust based on layout */
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #ccc;
+  border-top-color: #42b983;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 10px;
+}
+
+.loading-text {
+  font-size: 16px;
+  color: #555;
+  font-weight: 500;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 </style>

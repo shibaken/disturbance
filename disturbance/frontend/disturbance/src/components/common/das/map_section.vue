@@ -16,8 +16,21 @@
                         
                     />
                 </div>
-                <div class="noPrint">  
-                     <File 
+                <div class="noPrint">
+                    <div button-sec>
+                        <File 
+                            ref="map_doc"
+                            :name="map_doc_name" 
+                            label="Upload Shapefile" :id="map_doc_id"  
+                            :isRepeatable="true" 
+                            :readonly="proposal.readonly"   
+                            :proposal_id="proposal.id" 
+                            :isRequired="true"
+                            :key="fileKey">
+                        </File>
+                    </div>
+                     <!-- <File 
+                        ref="map_doc"
                         :name="map_doc_name" 
                         label="Upload Shapefile" :id="map_doc_id"  
                         :isRepeatable="true" 
@@ -25,7 +38,7 @@
                         :proposal_id="proposal.id" 
                         :isRequired="true"
                         :key="fileKey">
-                    </File>
+                    </File> -->
                     <ul>
                             <li>
                                 Upload a shapefile identifying the maximum area affected by the proposal, including all associated activities.
@@ -43,13 +56,16 @@
                                 Valid shapefile must include 4 files, in .dbf .prj .shp and .shx format.
                             </li>
                             <li>
+                                You must validate the shapefile and prefill the proposal before proceeding.
+                            </li>
+                            <li>
                                 Further information <a :href="shapefile_info_url" target="_blank"><i class="fa fa-question-circle" style="color:blue">&nbsp;</i></a>
                             </li>
                         </ul>
                 </div>
 
                 <alert :show.sync="showError" type="danger" style="color: red" class="noPrint"><strong>{{errorString}}</strong></alert>
-                <div class="noPrint">
+                <div class="noPrint button-sec">
                     <div class="row">
                         <div class="col-sm-2">
                             <span v-if="validating">
@@ -181,6 +197,9 @@
                 if(this.is_external && this.proposal && !this.proposal.readonly){
                     return false;
                 }
+                if(this.is_internal && this.proposal && this.proposal.draft_assessor_mode){
+                    return false;
+                }
                 return true;
             },
             validating: function(){
@@ -197,6 +216,9 @@
             },
             prefill_button_disabled: function(){
                 if(this.is_external && this.proposal && !this.proposal.readonly && this.proposal.shapefile_json){
+                    return false;
+                }
+                if(this.is_internal && this.proposal && this.proposal.draft_assessor_mode && this.proposal.shapefile_json){
                     return false;
                 }
                 return true;
@@ -219,7 +241,8 @@
                 if(vm.global_settings){
                     for(var i=0; i<vm.global_settings.length; i++){
                         if(vm.global_settings[i].key=='shapefile_info'){
-                            return vm.global_settings[i].value;
+                            //return vm.global_settings[i].value;
+                            return '/help/' + vm.proposal.application_type + '/user/#' + vm.global_settings[i].key;
                         }
                     }
                 }
@@ -261,17 +284,24 @@
                 vm.showError=false;
                 vm.errorString='';
                 var inputOptions = {};
-
+                var html_text='<p>Are you sure you want to prefill this Proposal?</p>'
                 if(vm.proposal.data && vm.proposal.data.length > 0) {
+                    // inputOptions = {
+                    //     'clear_sqs': 'Clear only Spatial data from the Proposal',
+                    //     'clear_all': 'Clear all Proposal data',
+                    // }
                     inputOptions = {
-                        'clear_sqs': 'Clear only Spatial data from the Proposal',
-                        'clear_all': 'Clear all Proposal data',
+                        'clear_sqs': 'Refresh/ Renew GIS data only',
+                        'clear_all': 'Clear ALL information from the Proposal',
                     }
+                    html_text ='<p>Are you sure you want to prefill this Proposal?<br>Select the Applicable:</p>'
                 }
                 
+
                 await swal({
                     title: "Prefill Proposal",
-                    html: '<p>Are you sure you want to prefill this Proposal?<br>Select the Applicable:</p>',
+                    //html: '<p>Are you sure you want to prefill this Proposal?<br>Select the Applicable:</p>',
+                    html: html_text,
                     type: "warning",
                     showCancelButton: true,
                     confirmButtonText: 'Prefill Proposal',
@@ -404,6 +434,13 @@
         .panel-default {
             margin-top: 30px;
         }
+    }
+    .button-sec {
+        position: relative;
+        z-index: 1100;
+    }
+    .swal2-container {
+        z-index: 15000 !important;
     }
 </style>
 

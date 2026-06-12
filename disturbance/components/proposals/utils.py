@@ -50,6 +50,7 @@ import geopandas as gpd
 
 from disturbance.settings import RESTRICTED_RADIUS, TIME_ZONE
 from disturbance.utils import convert_moment_str_to_python_datetime_obj, search_keys
+from disturbance.helpers import is_internal
 
 import logging
 logger = logging.getLogger(__name__)
@@ -63,6 +64,7 @@ def create_data_from_form(schema, post_data, file_data, post_data_index=None,spe
     assessor_data_list = []
     comment_data_list = {}
     add_info_applicant_list={}
+    refresh_timestamp_list={}
     special_fields_search = SpecialFieldsSearch(special_fields)
     add_info_applicant_search=AddInfoApplicantDataSearch()
     refresh_timestamp_search= RefreshTimestampSearch()
@@ -777,101 +779,73 @@ def save_proponent_data_apiary(proposal_obj, request, viewset):
                 site_ids_delete_vacant = []
 
                 # Handle ApiarySites here
-                for index, feature in enumerate(site_locations_received):
-                    feature['proposal_apiary_id'] = proposal_obj.proposal_apiary.id
+                # only internal users can add/update apiary sites on renewal applications
+                renewal = proposal_obj.proposal_type == "renewal"
+                if is_internal(request) or not renewal:
+                    for index, feature in enumerate(site_locations_received):
+                        feature['proposal_apiary_id'] = proposal_obj.proposal_apiary.id
 
-                    try:
-                        # Update existing
-                        # for the newely addes apiary site, 'id_' has its guid
-                        # for the existing apiary site, 'value_'.'site_guid' has its guid
-                        try:
-                            # Try to get this apiary site assuming already saved as 'draft'
-                            a_site = ApiarySite.objects.get(site_guid=feature['id_'])
+                        #first check if apiary site with site guid exists, checking with a provided feature['_id']
+                        site_check = ApiarySite.objects.none()
+                        if type(feature['id_']) == int:
+                            site_check = ApiarySite.objects.filter(id=feature['id_'])
+                        else:
+                            site_check = ApiarySite.objects.filter(site_guid=feature['id_'])
 
-                        except ApiarySite.DoesNotExist:
-                            # Try to get this apiary site assuming it is 'vacant' site (available site)
-                            a_site = ApiarySite.objects.get(site_guid=feature['values_']['site_guid'])
+                        if site_check.exists():
+                            a_site = site_check.first()
+                            serializer = ApiarySiteSerializer(a_site, data=feature)
+                        else:
+                            if 'site_guid' in feature['values_']:
+                                site_check = ApiarySite.objects.filter(site_guid=feature['values_']['site_guid'])
+                                # Try to get this apiary site assuming it is 'vacant' site (available site)
+                                if site_check.exists():
+                                    a_site = site_check.first()
+                                    serializer = ApiarySiteSerializer(a_site, data=feature)
+                                else:
+                                    # Create new apiary site when both of the above queries failed
+                                    feature['site_guid'] = feature['id_']
+                                    serializer = ApiarySiteSerializer(data=feature)
+                            else:
+                                # Create new apiary site when both of the above queries failed
+                                feature['site_guid'] = feature['id_']
+                                serializer = ApiarySiteSerializer(data=feature)
 
-                        serializer = ApiarySiteSerializer(a_site, data=feature)
-                    except KeyError:  # when 'site_guid' is not defined above
-                        # Create new apiary site when both of the above queries failed
-                        # if feature['values_']['site_category'] == 'south_west':
-                        #     category_obj = SiteCategory.objects.get(name='south_west')
-                        # else:
-                        #     category_obj = SiteCategory.objects.get(name='remote')
-                        # feature['site_category_id'] = category_obj.id
-                        feature['site_guid'] = feature['id_']
+                        if serializer:
+                            serializer.is_valid(raise_exception=True)
+                            apiary_site_obj = serializer.save()
 
-                        serializer = ApiarySiteSerializer(data=feature)
-                        # This is test line for gitpush
+                            # Save coordinate
+                            geom_str = GEOSGeometry(
+                                'POINT(' +
+                                str(feature['values_']['geometry']['flatCoordinates'][0]) + ' ' +
+                                str(feature['values_']['geometry']['flatCoordinates'][1]) +
+                                ')', srid=4326
+                            )
+                            # Get apiary_site_on_proposal obj
+                            apiary_site_on_proposal, created = ApiarySiteOnProposal.objects.get_or_create(apiary_site=apiary_site_obj, proposal_apiary=proposal_obj.proposal_apiary)
+                            # Save the coordinate as 'draft' coordinate
+                            serializer = ApiarySiteOnProposalDraftGeometrySaveSerializer(apiary_site_on_proposal, data={
+                                'wkb_geometry_draft': geom_str,
+                            })
+                            serializer.is_valid(raise_exception=True)
+                            serializer.save()
 
-                    if serializer:
-                        serializer.is_valid(raise_exception=True)
-                        apiary_site_obj = serializer.save()
-
-                        # Save coordinate
-                        geom_str = GEOSGeometry(
-                            'POINT(' +
-                            str(feature['values_']['geometry']['flatCoordinates'][0]) + ' ' +
-                            str(feature['values_']['geometry']['flatCoordinates'][1]) +
-                            ')', srid=4326
-                        )
-                        # Get apiary_site_on_proposal obj
-                        apiary_site_on_proposal, created = ApiarySiteOnProposal.objects.get_or_create(apiary_site=apiary_site_obj, proposal_apiary=proposal_obj.proposal_apiary)
-                        # Save the coordinate as 'draft' coordinate
-                        serializer = ApiarySiteOnProposalDraftGeometrySaveSerializer(apiary_site_on_proposal, data={
-                            'wkb_geometry_draft': geom_str,
-                            # 'workflow_selected_status': False,
-                        })
-                        serializer.is_valid(raise_exception=True)
-                        serializer.save()
-
-                        if viewset.action == 'submit':
-                            # When submit, copy the coordinates from draft to the processed
-                            # apiary_site_on_proposal.wkb_geometry_processed = apiary_site_on_proposal.wkb_geometry_draft
-                            # apiary_site_on_proposal.site_status = ApiarySiteOnProposal.SITE_STATUS_PENDING_PAYMENT
-                            apiary_site_on_proposal.making_payment = True  # This should replace the above line.  site_status should not be overwritten by 'pending_payment'
-                            apiary_site_on_proposal.save()
-
-#                        if apiary_site_obj.status in (ApiarySite.STATUS_DRAFT, ApiarySite.STATUS_PENDING, ApiarySite.STATUS_VACANT, ApiarySite.STATUS_CURRENT,):
-#                            data = {'wkb_geometry_pending': geom_str}
-#                            save_point_serializer = ApiarySiteSavePointPendingSerializer
-#                        else:
-#                            # Should not reach here?
-#                            pass
-#                        serializer = save_point_serializer(apiary_site_obj, data=data)
-#                        serializer.is_valid(raise_exception=True)
-#                        serializer.save()
-
-                        # if apiary_site_obj.is_vacant:
-                        #     apiary_site_obj.proposal_apiary = None  # This should be already None
-                        #     apiary_site_obj.proposal_apiaries.add(proposal_obj.proposal_apiary)
-                        #     apiary_site_obj.save()
+                            if viewset.action == 'submit':
+                                # When submit, copy the coordinates from draft to the processed
+                                apiary_site_on_proposal.making_payment = True 
+                                apiary_site_on_proposal.save()
 
                 if viewset.action == 'submit':
                     proposal_obj.proposal_apiary.validate_apiary_sites(raise_exception=True)
 
                 save_checklist_answers('applicant', proposal_apiary_data.get('applicant_checklist_answers'))
-                # expiry_date = sanitize_date(proposal_apiary_data.get('public_liability_insurance_expiry_date'))
-                # proposal_obj.proposal_apiary.public_liability_insurance_expiry_date = expiry_date
-                # proposal_obj.proposal_apiary.save()
 
                 # Delete existing
-                sites_delete = ApiarySite.objects.filter(id__in=site_ids_delete)
-                for site_to_delete in sites_delete:
-                    proposal_obj.proposal_apiary.delete_relation(site_to_delete)
-
-
-                # sites_delete.delete()
-
-                # Update the site(s) which is picked up as proposed site
-                # sites_updated = ApiarySite.objects.filter(id__in=site_ids_delete)
-                # sites_updated.update(proposal_apiary=None)
-
-                # Delete association with 'vacant' site
-                # sites_remove = ApiarySite.objects.filter(id__in=site_ids_delete_vacant, status=ApiarySite.STATUS_VACANT)
-                # for vacant_site in sites_remove:
-                #     vacant_site.proposal_apiaries.remove(proposal_obj.proposal_apiary)
+                if is_internal(request) or not renewal:
+                    sites_delete = ApiarySite.objects.filter(id__in=site_ids_delete)
+                    for site_to_delete in sites_delete:
+                        proposal_obj.proposal_apiary.delete_relation(site_to_delete)
 
             # Save Temporary Use data
             temporary_use_data = request.data.get('apiary_temporary_use', None)
@@ -1201,7 +1175,7 @@ def proposal_submit_apiary(proposal, request):
             ret2 = send_external_submit_email_notification(request, proposal)
 
             #proposal.save_form_tabs(request)
-            if ret1 and ret2:
+            if (ret1 and ret2) or settings.DEBUG:
                 proposal.processing_status = Proposal.PROCESSING_STATUS_WITH_ASSESSOR
                 proposal.customer_status = Proposal.CUSTOMER_STATUS_WITH_ASSESSOR
                 proposal.documents.all().update(can_delete=False)
@@ -1303,7 +1277,7 @@ def create_region_help():
     global richtext_assessor
 
     #Get the keys to add help text into help page
-    help_keys = [ 'region_help_url', 'district_help_url', 'activity_type_help_url','sub_activity_1_help_url','sub_activity_2_help_url','category_help_url']
+    help_keys = [ 'region_help_url', 'district_help_url', 'activity_type_help_url','sub_activity_1_help_url','sub_activity_2_help_url','category_help_url', 'shapefile_info']
     
     #Convert the Globale settings keys to dict so its easier to get value of the key for title'
     gs_keys_dict= dict(GlobalSettings.keys)
@@ -2233,19 +2207,21 @@ def gen_shapefile(user, qs=Proposal.objects.none(), filter_kwargs={}, geojson=Fa
                 gdf.set_crs = settings.CRS
                 #gdf['geometry'] = gdf['geometry']
 
-                gdf['org']        = p.applicant.name if p.applicant else None
-                gdf['app_no']     = p.approval.lodgement_number if p.approval else None
-                gdf['prop_title'] = p.title
-                gdf['appissdate'] = p.approval.issue_date.strftime("%Y-%d-%d") if p.approval else None
-                gdf['appstadate'] = p.approval.start_date.strftime("%Y-%d-%d") if p.approval else None
-                gdf['appexpdate'] = p.approval.expiry_date.strftime("%Y-%d-%d") if p.approval else None
-                gdf['appstatus']  =  p.approval.status if p.approval else None
-                gdf['propstatus'] =  p.processing_status
-                gdf['assocprop']  = list(Proposal.objects.filter(approval__lodgement_number=p.approval.lodgement_number).values_list('lodgement_number', flat=True)) if p.approval else None
-                gdf['proptype']   = p.application_type.name
+               # Broadcast scalar values to all rows in the GeoDataFrame
+                gdf['org']        = [p.applicant.name if p.applicant else None] * len(gdf)
+                gdf['app_no']     = [p.approval.lodgement_number if p.approval else None] * len(gdf)
+                gdf['prop_title'] = [p.title] * len(gdf)
+                gdf['appissdate'] = [p.approval.issue_date.strftime("%Y-%m-%d") if p.approval else None] * len(gdf)
+                gdf['appstadate'] = [p.approval.start_date.strftime("%Y-%m-%d") if p.approval else None] * len(gdf)
+                gdf['appexpdate'] = [p.approval.expiry_date.strftime("%Y-%m-%d") if p.approval else None] * len(gdf)
+                gdf['appstatus']  = [p.approval.status if p.approval else None] * len(gdf)
+                gdf['propstatus'] = [p.processing_status] * len(gdf)
+                assocprop_val = ','.join(Proposal.objects.filter(approval__lodgement_number=p.approval.lodgement_number).values_list('lodgement_number', flat=True)) if p.approval else None
+                gdf['assocprop']  = [assocprop_val] * len(gdf)
+                gdf['proptype']   = [p.application_type.name] * len(gdf)
                 #gdf['propurl']    = request.build_absolute_uri(reverse('internal-proposal-detail',kwargs={'proposal_pk': p.id}))
-                gdf['propurl']    = settings.BASE_URL + reverse('internal-proposal-detail',kwargs={'proposal_pk': p.id})
-                gdf['activity'] = p.activity
+                gdf['propurl']    = [settings.BASE_URL + reverse('internal-proposal-detail',kwargs={'proposal_pk': p.id})] * len(gdf)
+                gdf['activity']   = [p.activity] * len(gdf)
 
                 #gdf.set_crs = settings.CRS
                 gdf_concat = pd.concat([gdf_concat, gdf[columns]], ignore_index=True)

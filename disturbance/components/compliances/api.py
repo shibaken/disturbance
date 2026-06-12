@@ -39,6 +39,7 @@ from disturbance.components.compliances.models import (
  #       Proposal
   #      )
 from disturbance.components.compliances.serializers import (
+    DTComplianceSerializer,
     ComplianceSerializer,
     SaveComplianceSerializer,
     ComplianceActionSerializer,
@@ -141,12 +142,49 @@ class CompliancePaginatedViewSet(viewsets.ModelViewSet):
     #renderer_classes = (ComplianceRenderer,)
     page_size = 10
     queryset = Compliance.objects.none()
-    serializer_class = ComplianceSerializer
+    serializer_class = DTComplianceSerializer
 
     def get_queryset(self):
         if is_internal(self.request):
             #return Compliance.objects.all()
             return Compliance.objects.all().exclude(processing_status='discarded')
+        elif is_customer(self.request):
+            user_orgs = [org.id for org in self.request.user.disturbance_organisations.all()]
+            compliance_id_list = []
+            # Apiary logic for individual applicants
+            for apiary_compliance in Compliance.objects.filter( 
+                    Q(approval__applicant_id__in = user_orgs) | Q(approval__proxy_applicant = self.request.user
+                        )).exclude(processing_status='discarded'):
+                        compliance_id_list.append(apiary_compliance.id)
+            # DAS logic
+            for das_compliance in Compliance.objects.filter( 
+                    Q(proposal__applicant_id__in = user_orgs) | Q(proposal__submitter = self.request.user
+                        ) ).exclude(processing_status='discarded'):
+                        compliance_id_list.append(das_compliance.id)
+            # Return all records
+            queryset =  Compliance.objects.filter(id__in=compliance_id_list)
+            return queryset
+        return Compliance.objects.none()
+    
+    def get_external_queryset(self):
+        if is_internal(self.request):
+            #return Compliance.objects.all()
+            #return Compliance.objects.all().exclude(processing_status='discarded')
+            user_orgs = [org.id for org in self.request.user.disturbance_organisations.all()]
+            compliance_id_list = []
+            # Apiary logic for individual applicants
+            for apiary_compliance in Compliance.objects.filter( 
+                    Q(approval__applicant_id__in = user_orgs) | Q(approval__proxy_applicant = self.request.user
+                        )).exclude(processing_status='discarded'):
+                        compliance_id_list.append(apiary_compliance.id)
+            # DAS logic
+            for das_compliance in Compliance.objects.filter( 
+                    Q(proposal__applicant_id__in = user_orgs) | Q(proposal__submitter = self.request.user
+                        ) ).exclude(processing_status='discarded'):
+                        compliance_id_list.append(das_compliance.id)
+            # Return all records
+            queryset =  Compliance.objects.filter(id__in=compliance_id_list)
+            return queryset
         elif is_customer(self.request):
             user_orgs = [org.id for org in self.request.user.disturbance_organisations.all()]
             compliance_id_list = []
@@ -189,11 +227,14 @@ class CompliancePaginatedViewSet(viewsets.ModelViewSet):
            template_group = 'das'
         if template_group == 'apiary':
             #qs = self.get_queryset().filter(application_type__apiary_group_application_type=True).exclude(processing_status='discarded')
-            qs = self.get_queryset().filter(
+            # qs = self.get_queryset().filter(
+            #         apiary_compliance=True
+            #         )
+            qs = self.get_external_queryset().filter(
                     apiary_compliance=True
                     )
         else:
-            qs = self.get_queryset().exclude(
+            qs = self.get_external_queryset().exclude(
                     apiary_compliance=True
                     )
         #qs = self.get_queryset().exclude(processing_status='future')
@@ -211,9 +252,47 @@ class CompliancePaginatedViewSet(viewsets.ModelViewSet):
 
         self.paginator.page_size = qs.count()
         result_page = self.paginator.paginate_queryset(qs, request)
-        serializer = ComplianceSerializer(result_page, context={'request':request}, many=True)
+        serializer = DTComplianceSerializer(result_page, context={'request':request}, many=True)
         return self.paginator.get_paginated_response(serializer.data)
 
+    @list_route(methods=['GET',])
+    def compliances_internal(self, request, *args, **kwargs):
+        """
+        Paginated serializer for datatables - used by the external dashboard
+
+        To test:
+            http://localhost:8000/api/compliance_paginated/compliances_external/?format=datatables&draw=1&length=2
+        """
+
+        web_url = request.META.get('HTTP_HOST', None)
+        template_group = None
+        if web_url in settings.APIARY_URL:
+           template_group = 'apiary'
+        else:
+           template_group = 'das'
+        if template_group == 'apiary':
+            qs = self.get_queryset().filter(
+                    apiary_compliance=True
+                    )
+        else:
+            qs = self.get_queryset().exclude(
+                    apiary_compliance=True
+                    )
+        qs = self.filter_queryset(qs)
+        #qs = qs.order_by('lodgement_number', '-issue_date').distinct('lodgement_number')
+
+        # on the internal organisations dashboard, filter the Proposal/Approval/Compliance datatables by applicant/organisation
+        applicant_id = request.GET.get('org_id')
+        if applicant_id:
+            if template_group == 'apiary':
+                qs = qs.filter(approval__applicant_id=applicant_id)
+            else:
+                qs = qs.filter(proposal__applicant_id=applicant_id)
+
+        self.paginator.page_size = qs.count()
+        result_page = self.paginator.paginate_queryset(qs, request)
+        serializer = DTComplianceSerializer(result_page, context={'request':request}, many=True)
+        return self.paginator.get_paginated_response(serializer.data)
 
 class ComplianceViewSet(viewsets.ModelViewSet):
     serializer_class = ComplianceSerializer

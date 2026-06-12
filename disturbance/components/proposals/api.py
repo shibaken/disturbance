@@ -359,6 +359,23 @@ class ProposalPaginatedViewSet(viewsets.ModelViewSet):
             return qs
             #queryset =  Proposal.objects.filter(region__isnull=False).filter( Q(applicant_id__in = user_orgs) | Q(submitter = user) )
         return Proposal.objects.none()
+    
+    def get_external_queryset(self):
+        user = self.request.user
+        if is_internal(self.request): #user.is_authenticated():
+            #return Proposal.objects.all().order_by('-id')
+            #return Proposal.objects.exclude(processing_status='hidden')
+            user_orgs = [org.id for org in user.disturbance_organisations.all()]
+            qs = Proposal.objects.exclude(processing_status='hidden').filter(Q(applicant_id__in=user_orgs) | Q(submitter=user) | Q(proxy_applicant=user))
+            return qs
+        elif is_customer(self.request):
+            user_orgs = [org.id for org in user.disturbance_organisations.all()]
+            #return  Proposal.objects.filter( Q(applicant_id__in = user_orgs) | Q(submitter = user) )
+            #return Proposal.objects.filter( Q(applicant_id__in = user_orgs) | Q(submitter = user) | Q(proxy_applicant = user)).order_by('-id')
+            qs = Proposal.objects.exclude(processing_status='hidden').filter(Q(applicant_id__in=user_orgs) | Q(submitter=user) | Q(proxy_applicant=user))
+            return qs
+            #queryset =  Proposal.objects.filter(region__isnull=False).filter( Q(applicant_id__in = user_orgs) | Q(submitter = user) )
+        return Proposal.objects.none()
 
     @list_route(methods=['GET',])
     def proposals_internal(self, request, *args, **kwargs):
@@ -443,11 +460,11 @@ class ProposalPaginatedViewSet(viewsets.ModelViewSet):
         """
         template_group = get_template_group(request)
         if template_group == 'apiary':
-            qs = self.get_queryset().filter(
+            qs = self.get_external_queryset().filter(
                     application_type__name__in=[ApplicationType.APIARY, ApplicationType.SITE_TRANSFER, ApplicationType.TEMPORARY_USE]
                     ).exclude(processing_status=Proposal.PROCESSING_STATUS_DISCARDED)
         else:
-            qs = self.get_queryset().exclude(
+            qs = self.get_external_queryset().exclude(
                     application_type__name__in=[ApplicationType.APIARY, ApplicationType.SITE_TRANSFER, ApplicationType.TEMPORARY_USE]
                     ).exclude(processing_status=Proposal.PROCESSING_STATUS_DISCARDED)
         qs = self.filter_queryset(qs)
@@ -600,6 +617,17 @@ class ApiarySiteViewSet(viewsets.ModelViewSet):
     queryset = ApiarySite.objects.none()
     serializer_class = ApiarySiteSerializer
 
+    def get_queryset(self):
+        if is_internal(self.request):
+            return ApiarySite.objects.all()
+        elif is_customer(self.request):
+            user_orgs = [org.id for org in self.request.user.disturbance_organisations.all()]
+            approval_queryset =  Approval.objects.filter(Q(applicant_id__in = user_orgs)|Q(proxy_applicant_id=self.request.user.id)).exclude(status='hidden')
+            apiary_sites = ApiarySite.objects.filter(approval_set__in=approval_queryset).distinct()
+            return apiary_sites
+        else:
+            return ApiarySite.objects.none()
+
     def is_internal_system(self, request):
         apiary_site_list_token = request.query_params.get(ApiaryGlobalSettings.KEY_APIARY_SITES_LIST_TOKEN, None)
         if apiary_site_list_token:
@@ -627,18 +655,18 @@ class ApiarySiteViewSet(viewsets.ModelViewSet):
         relevant_applicant = apiary_site.get_relevant_applicant_name()
         return Response({'relevant_applicant': relevant_applicant})
 
-    def get_queryset(self):
-        user = self.request.user
+    # def get_queryset(self):
+    #     user = self.request.user
 
-        # Only internal user is supposed to access here
-        if is_internal(self.request):  # user.is_authenticated():
-            return ApiarySite.objects.all()
-        #elif is_customer(self.request):
-            # qs = qs.exclude(status=ApiarySite.STATUS_DRAFT)
-            #pass
-        else:
-            #logger.warn("User is neither internal user nor customer: {} <{}>".format(user.get_full_name(), user.email))
-            return ApiarySite.objects.none()
+    #     # Only internal user is supposed to access here
+    #     if is_internal(self.request):  # user.is_authenticated():
+    #         return ApiarySite.objects.all()
+    #     #elif is_customer(self.request):
+    #         # qs = qs.exclude(status=ApiarySite.STATUS_DRAFT)
+    #         #pass
+    #     else:
+    #         #logger.warn("User is neither internal user nor customer: {} <{}>".format(user.get_full_name(), user.email))
+    #         return ApiarySite.objects.none()
         
     @detail_route(methods=['POST',])
     @basic_exception_handler
@@ -850,7 +878,7 @@ class ApiarySiteViewSet(viewsets.ModelViewSet):
         serializer_proposal.data['features'].extend(serializer_approval.data['features'])
         return Response(serializer_proposal.data)
 
-    @basic_exception_handler
+    #@basic_exception_handler
     def partial_update(self, request, *args, **kwargs):
         with transaction.atomic():
             apiary_site = self.get_object()
@@ -884,17 +912,6 @@ class ApiarySiteViewSet(viewsets.ModelViewSet):
                 print(serializer.data['properties']['available'])
                 return Response(serializer.data)
 
-            # instance = self.get_object()
-            #
-            # new_status = request.data.get('status', None)
-            # all_statuses = list(map(lambda x: x[0], ApiarySite.STATUS_CHOICES))
-            # if new_status and new_status in all_statuses:
-            #     instance.status = new_status
-            #     instance.save()
-            #
-            # serializer = ApiarySiteSerializer(instance)
-            #
-            # return Response(serializer.data)
 
 
 class ProposalApiaryViewSet(viewsets.ModelViewSet):
@@ -1616,6 +1633,7 @@ class ProposalViewSet(viewsets.ModelViewSet):
         activity_qs = []
         application_type_qs = []
         applicant_qs = []
+        district_qs = []
         if template_group == 'apiary':
             qs = self.get_queryset().filter(
                 application_type__name__in=[ApplicationType.APIARY, ApplicationType.SITE_TRANSFER, ApplicationType.TEMPORARY_USE]
@@ -1629,6 +1647,8 @@ class ProposalViewSet(viewsets.ModelViewSet):
                         #ApplicationType.TEMPORARY_USE
                         ]).values_list(
                         'name', flat=True).distinct()
+            applicant_qs = qs.filter(applicant__isnull=False).distinct(
+                            'applicant_id').values_list('applicant_id','applicant__organisation__name',)
         else:
             qs = self.get_queryset().exclude(
                 application_type__name__in=[ApplicationType.APIARY, ApplicationType.SITE_TRANSFER, ApplicationType.TEMPORARY_USE])
@@ -1642,7 +1662,7 @@ class ProposalViewSet(viewsets.ModelViewSet):
 
         activity_qs =  qs.filter(activity__isnull=False).values_list('activity', flat=True).distinct()
         submitters = [dict(email=i[2], search_term='{} {} ({})'.format(i[0], i[1], i[2])) for i in submitter_qs]
-        application_type_qs =  qs.filter(application_type__isnull=False).values_list('application_type__name', flat=True).distinct()
+        application_type_qs =  qs.filter(application_type__isnull=False, application_type__visible=True).values_list('application_type__name', flat=True).distinct()
         applicants = [dict(id=i[0], search_term='{}'.format(i[1])) for i in applicant_qs]
         data = dict(
             regions=region_qs,
@@ -2201,15 +2221,24 @@ class ProposalViewSet(viewsets.ModelViewSet):
             raise serializers.ValidationError(str(e))
 
     @detail_route(methods=['GET',])
-    def renew_approval(self, request, *args, **kwargs):
+    def renew_approval(self, request, pk=None, *args, **kwargs):
         try:
-            instance = self.get_object()
-            instance = instance.renew_approval(request)
-            if instance.apiary_group_application_type:
-                serializer_class = self.internal_serializer_class()
-                serializer = serializer_class(instance,context={'request':request})
-            else:
-                serializer = SaveProposalSerializer(instance,context={'request':request})
+            #For this function we must authenticate based on the approval id provided, as site transfer applications are not accessible by transferees from which their approvals are created from
+            approval_id = request.GET.get('approval_id',None)
+
+            user_orgs = [org.id for org in self.request.user.disturbance_organisations.all()]
+            queryset =  Approval.objects.filter(id=approval_id).filter(Q(applicant_id__in = user_orgs)|Q(proxy_applicant_id=self.request.user.id))
+            if not queryset.exists() and not is_internal(request):
+                raise serializers.ValidationError("User not authorised to renew this Approval.")
+
+            instance = Proposal.objects.get(id=pk)
+            new_instance = instance.renew_approval(request)
+            serializer = SaveProposalSerializer(new_instance,context={'request':request})
+
+            #verify that the proposal is the new proposal that the user is allowed to access
+            if not (new_instance.applicant_id in user_orgs or new_instance.proxy_applicant_id == self.request.user.id or is_internal(request)):
+                raise serializers.ValidationError("User not authorised to access this Proposal.")
+
             return Response(serializer.data)
         except Exception as e:
             print(traceback.print_exc())
@@ -4174,6 +4203,7 @@ class DASMapFilterViewSet(viewsets.ReadOnlyModelViewSet):
         region_qs = []
         activity_qs = []
         application_type_qs = []
+        applicant_qs = []
         if template_group == 'apiary':
             qs = self.get_queryset().filter(
                 application_type__name__in=[ApplicationType.APIARY, ApplicationType.SITE_TRANSFER, ApplicationType.TEMPORARY_USE]
@@ -4191,7 +4221,7 @@ class DASMapFilterViewSet(viewsets.ReadOnlyModelViewSet):
             applicant_qs = qs.filter(applicant__isnull=False).distinct(
                             'applicant_id').values_list('applicant_id','applicant__organisation__name',)
 
-        application_type_qs =  qs.filter(application_type__isnull=False).values_list('application_type__name', flat=True).distinct()
+        application_type_qs =  qs.filter(application_type__isnull=False, application_type__visible=True).values_list('application_type__name', flat=True).distinct()
         activity_qs =  qs.filter(activity__isnull=False).values_list('activity', flat=True).distinct()
         submitters = [dict(email=i[2], search_term='{} {} ({})'.format(i[0], i[1], i[2])) for i in submitter_qs]
         applicants = [dict(id=i[0], search_term='{}'.format(i[1])) for i in applicant_qs]

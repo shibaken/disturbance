@@ -94,8 +94,8 @@ class DisturbanceRoutingView(TemplateView):
 
     def get(self, *args, **kwargs):
         if self.request.user.is_authenticated():
-            if is_internal(self.request):
-                return redirect('internal')
+            # if is_internal(self.request):
+            #     return redirect('internal')
             return redirect('external')
         kwargs['form'] = LoginForm
         return super(DisturbanceRoutingView, self).get(*args, **kwargs)
@@ -597,6 +597,7 @@ def getPrivateFile(request):
             if extension == 'eml':
                 return HttpResponse(the_data, content_type="application/vnd.ms-outlook")
 
+            mimetypes.types_map.update({'.prj': 'application/octet-stream'})
             return HttpResponse(the_data, content_type=mimetypes.types_map['.'+str(extension.lower())])
        
     return HttpResponse()

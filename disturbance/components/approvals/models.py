@@ -142,6 +142,7 @@ class Approval(RevisionedMixin):
     replaced_by = models.ForeignKey('self', blank=True, null=True)
     #current_proposal = models.ForeignKey(Proposal,related_name = '+')
     current_proposal = models.ForeignKey(Proposal,related_name='approvals')
+    #TODO we have a renewal document model and a field here - one of these is not needed
     renewal_document = models.ForeignKey(ApprovalDocument, blank=True, null=True, related_name='renewal_document')
     # apiary_renewal_document = models.ForeignKey(RenewalDocument, blank=True, null=True, related_name='apiary_renewal_document')
     renewal_sent = models.BooleanField(default=False)
@@ -170,13 +171,12 @@ class Approval(RevisionedMixin):
         unique_together = ('lodgement_number', 'issue_date')
 
     def add_apiary_sites_to_proposal_apiary_for_renewal(self, proposal_apiary):
-        for apiary_site in self.apiary_sites.all():  # Exclude just in case there is.
-            relation = self.get_relation(apiary_site)
+        for apiary_site_on_approval in self.get_relations().exclude(site_status="denied"):
             ApiarySiteOnProposal.objects.create(
-                apiary_site=apiary_site,
+                apiary_site=apiary_site_on_approval.apiary_site,
                 proposal_apiary=proposal_apiary,
-                wkb_geometry_draft=relation.wkb_geometry,
-                site_category_draft=relation.site_category,
+                wkb_geometry_draft=apiary_site_on_approval.wkb_geometry,
+                site_category_draft=apiary_site_on_approval.site_category,
                 for_renewal=True,
             )
 
@@ -252,7 +252,18 @@ class Approval(RevisionedMixin):
         elif self.proxy_applicant:
             return self.proxy_applicant.email
         else:
-            return self.current_proposal.submitter.email
+            from disturbance.components.main.models import ApplicationType
+            if self.current_proposal and self.current_proposal.application_type and self.current_proposal.application_type.name != ApplicationType.SITE_TRANSFER:
+                return self.current_proposal.submitter.email if self.current_proposal.submitter else ""
+            else:
+                #find latest non-site_transfer proposal for Approval (unless the approval belongs to the transferer)
+                latest_proposal = Proposal.objects.filter(approval=self).filter(
+                    ~Q(application_type__name=ApplicationType.SITE_TRANSFER)|
+                    (Q(application_type__name=ApplicationType.SITE_TRANSFER)&Q(proposal_apiary__originating_approval=self))
+                ).filter(
+                    processing_status=Proposal.PROCESSING_STATUS_APPROVED
+                ).order_by("-id").first()
+                return latest_proposal.submitter.email if latest_proposal and latest_proposal.submitter else ""
 
     @property
     def relevant_applicant_name(self):

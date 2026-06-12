@@ -45,11 +45,22 @@ class ActivityMatrixViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = ActivityMatrix.objects.none()
     serializer_class = ActivityMatrixSerializer
 
-    def get_queryset(self):
+    def get_queryset_orig(self):
         user = self.request.user
         if user.is_authenticated():
             # specific to Disturbance application, so only exposing one record (most recent)
             return [ActivityMatrix.objects.filter(name='Disturbance').order_by('-version').first()]
+        return ActivityMatrix.objects.none()
+
+    def get_queryset(self):
+        user = self.request.user
+        all_latest_matrices=[]
+        if user.is_authenticated():
+            # specific to Disturbance application, so only exposing one record (most recent)
+            for matrix in ActivityMatrix.objects.all():
+                if matrix.latest:
+                    all_latest_matrices.append(matrix)
+            return all_latest_matrices
         return ActivityMatrix.objects.none()
 
 #    def list(self, request, *args, **kwargs):

@@ -98,7 +98,7 @@ WSGI_APPLICATION = 'disturbance.wsgi.application'
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
-        'rest_framework.renderers.BrowsableAPIRenderer',
+        #'rest_framework.renderers.BrowsableAPIRenderer',
         'rest_framework_datatables.renderers.DatatablesRenderer',
     ),
     #'DEFAULT_FILTER_BACKENDS': (
@@ -182,6 +182,7 @@ DEP_POSTAL = env('DEP_POSTAL','Locked Bag 104, Bentley Delivery Centre, Western 
 DEP_NAME = env('DEP_NAME','Department of Biodiversity, Conservation and Attractions')
 DEP_NAME_SHORT = env('DEP_NAME_SHORT','DBCA')
 SITE_URL = env('SITE_URL', 'https://' + '.'.join([SITE_PREFIX, SITE_DOMAIN]).strip('.'))
+SITE_APIARY_URL = 'https://' + '.'.join([SITE_PREFIX_APIARY, SITE_DOMAIN]).strip('.')
 PUBLIC_URL=env('PUBLIC_URL', SITE_URL)
 EMAIL_FROM = env('EMAIL_FROM', 'no-reply@' + SITE_DOMAIN).lower()
 DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', 'no-reply@' + SITE_DOMAIN).lower()
@@ -198,6 +199,7 @@ MAX_QUEUE_TIME = env('MAX_QUEUE_TIME', 24) # hours
 MAX_TASK_HISTORY = env('MAX_TASK_HISTORY', 60) # Days
 LOG_REQUEST_STATS = env('LOG_REQUEST_STATS', False)
 QS_PAGINATOR_SIZE = env('QS_PAGINATOR_SIZE', 400)
+SHOW_DAS_CHANGE_MSG = env('SHOW_DAS_CHANGE_MSG', True)
 
 CLEAR_AFTER_DAYS_FILE_EXPORT = env('CLEAR_AFTER_DAYS_FILE_EXPORT', 7) # Days
 GEO_EXPORT_FOLDER = env('GEO_EXPORT_FOLDER', 'geo_exports') # Days
@@ -220,9 +222,9 @@ VERSION_NO="1.0.1"
 
 BASE_URL='https://' + SITE_PREFIX + '.' + SITE_DOMAIN
 
-CRON_CLASSES = [
-    'appmonitor_client.cron.CronJobAppMonitorClient',
-]
+# CRON_CLASSES = [
+#     'appmonitor_client.cron.CronJobAppMonitorClient',
+# ]
 
 
 CKEDITOR_CONFIGS = {
@@ -310,7 +312,8 @@ LOGGING['loggers']['request_stats'] = {
 # LOGGING['loggers']['']['propagate'] = False
 
 import json
-print(json.dumps(LOGGING, indent=4))
+#print(json.dumps(LOGGING, indent=4))
 
 KMI_SERVER_URL = env('KMI_SERVER_URL', 'https://kmi.dbca.wa.gov.au')
 DEV_APP_BUILD_URL = env('DEV_APP_BUILD_URL')  # URL of the Dev app.js served by webpack & express
+DATA_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024 * 50  # 15M

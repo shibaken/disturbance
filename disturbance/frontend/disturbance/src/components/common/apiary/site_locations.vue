@@ -1,6 +1,6 @@
 <template lang="html">
     <div>
-        <div class="row col-sm-12">
+        <div class="row col-sm-12" v-if="!readonly && (!is_proposal_type_renewal || proposal.is_internal_user)">
             Mark the location of the new proposed site either by entering the latitude and longitude or by clicking the location in the map.
         </div>
 
@@ -12,7 +12,7 @@
                 max="-12"
                 class="form-control grow1 ml-1"
                 v-model.number="proposal.proposal_apiary.latitude"
-                :readonly="readonly"
+                :readonly="readonly || (is_proposal_type_renewal && !proposal.is_internal_user)"
             />
             <label class="inline grow1 ml-2">Longitude:</label>
             <input
@@ -21,10 +21,10 @@
                 max="129"
                 class="form-control grow1 ml-1"
                 v-model.number="proposal.proposal_apiary.longitude"
-                :readonly="readonly"
+                :readonly="readonly || (is_proposal_type_renewal && !proposal.is_internal_user)"
             />
             <input
-                v-if="!readonly"
+                v-if="!readonly && (!is_proposal_type_renewal || proposal.is_internal_user)"
                 type="button"
                 @click="tryCreateNewSiteFromForm"
                 value="Add proposed site"
@@ -355,7 +355,7 @@
                 endTime: null,
 
                 dtHeaders: [
-                    'Id',
+                    'Site',
                     'Latitude',
                     'Longitude',
                     'Category',
@@ -377,12 +377,13 @@
                     columns: [
                         {
                             // id
-                            visible: false,
+                            visible: true,
                             mRender: function (data, type, full) {
-                                if (full.id) {
-                                    return full.id;
+                                const siteId = full.getId()
+                                if (isNaN(siteId)) {
+                                    return '---';
                                 } else {
-                                    return '';
+                                    return 'site:' + full.getId();
                                 }
                             }
                         },
@@ -434,7 +435,7 @@
                                 let status = feature.get('status')
 
                                 action_list.push(ret_str_view)
-                                if (!vm.readonly){
+                                if (!vm.readonly && (!vm.is_proposal_type_renewal || vm.proposal.is_internal_user)){
                                     action_list.push(ret_str_delete)
                                 }
                                 return action_list.join('<br />');
@@ -849,7 +850,6 @@
                 return styles
             },
             styleFunctionForNewSite: function(feature){
-                console.log('in styleFunctionForNewSite')
                 // This is used for the proposed apiary sites
                 let vacant_selected = feature.get('vacant_selected')
                 if (vacant_selected){
@@ -924,16 +924,16 @@
             set_mode: function(mode){
                 this.mode = mode
                 if (mode === 'measure'){
-                    this.drawForMeasure.setActive(true)
-                    this.drawForApiarySite.setActive(false)
+                    if(this.drawForMeasure) this.drawForMeasure.setActive(true)
+                    if(this.drawForApiarySite) this.drawForApiarySite.setActive(false)
                 } else if (mode === 'layer'){
                     this.clearMeasurementLayer()
-                    this.drawForMeasure.setActive(false)
-                    this.drawForApiarySite.setActive(false)
+                    if(this.drawForMeasure) this.drawForMeasure.setActive(false)
+                    if(this.drawForApiarySite) this.drawForApiarySite.setActive(false)
                 } else if (mode === 'normal') {
                     this.clearMeasurementLayer()
-                    this.drawForApiarySite.setActive(true)
-                    this.drawForMeasure.setActive(false)
+                    if(this.drawForApiarySite) this.drawForApiarySite.setActive(true)
+                    if(this.drawForMeasure) this.drawForMeasure.setActive(false)
                 }
             },
             clearMeasurementLayer: function(){
@@ -1582,7 +1582,7 @@
                 }));
 
                 // Draw and modify tools
-                if (!vm.readonly){
+                if (!vm.readonly && (!vm.is_proposal_type_renewal || vm.proposal.is_internal_user)){
                     let modifyInProgressList = [];
                     vm.drawForApiarySite = new Draw({
                         source: vm.drawingLayerSource,
@@ -1616,7 +1616,7 @@
                         }
                     });
                     vm.drawForApiarySite.on('drawend', async function(attributes){
-                        if (!vm.readonly){
+                        if (!vm.readonly && (!vm.is_proposal_type_renewal || vm.proposal.is_internal_user)){
                             let feature = attributes.feature;
                             let draw_id = vm.uuidv4();
                             let draw_coords = feature.getGeometry().getCoordinates();
@@ -1824,7 +1824,6 @@
             display_duration: function(label){
                 let finishedDate = new Date()
                 let delta = finishedDate - this.startTime
-                console.log(label + ' ' + delta + ' [ms]')
                 if (this.proposal_vacant_draft_loaded &&
                     this.proposal_vacant_processed_loaded &&
                     this.approval_vacant_loaded &&
@@ -1834,7 +1833,6 @@
                         this.endTime = new Date()
                         let timeDiff = this.endTime - this.startTime
                         let features = this.apiarySitesQuerySource.getFeatures()
-                        console.log('total time: ' + timeDiff + ' [ms] (' + features.length + ' sites)')
                     }
             },
             load_existing_sites: function(){

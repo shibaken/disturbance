@@ -1,4 +1,11 @@
-<tmplate lang="html">
+<template lang="html">
+    <div>
+        <template v-if="isLoading">
+            <div class="loading-container">
+                <div class="spinner"></div>
+                <p class="loading-text">Loading...</p>
+            </div>
+    </template>
     <div v-if="proposal" class="container" id="internalProposal">
         <template v-if="is_local">
         </template>
@@ -500,6 +507,7 @@
             @refreshFromResponse="refreshFromResponse"
         />
     </div>
+</div>
 </template>
 <script>
 import ProposalDisturbance from '../../form.vue'
@@ -830,7 +838,7 @@ export default {
         },
         proposedApproval: function(){
             let copiedProposedIssuanceApproval = helpers.copyObject(this.proposal.proposed_issuance_approval);
-            if (this.proposal.proposal_type == 'Renewal') {
+            if (copiedProposedIssuanceApproval != null && this.proposal.proposal_type == 'Renewal') {
                 copiedProposedIssuanceApproval.expiry_date = null;
             }
             this.$refs.proposed_approval.approval = this.proposal.proposed_issuance_approval != null ? copiedProposedIssuanceApproval : {};
@@ -1172,14 +1180,17 @@ export default {
             });
         },
         initialiseSelects: function(){
+            console.log("initialiseSelects")
+            console.log(this.canLimitedAction)
             let vm = this;
-            if (!vm.initialisedSelects){
+            if (!vm.initialisedSelects && vm.$refs.apiary_referral_groups){
                 $(vm.$refs.apiary_referral_groups).select2({
                     "theme": "bootstrap",
                     allowClear: true,
                     placeholder:"Select Referral"
                 }).
                 on("select2:select",function (e) {
+                    console.log("select2:select")
                     var selected = $(e.currentTarget);
                     vm.selected_referral = selected.val();
                 }).
@@ -1324,6 +1335,7 @@ export default {
     },
     created: async function() {
         try {
+            this.loading.push('Loading Proposal')
             const res = await Vue.http.get(`/api/proposal/${this.proposalId}/internal_proposal.json/?with_apiary_sites=true`);
             this.proposal = Object.assign({}, res.body);
             //this.original_proposal = helpers.copyObject(res.body);
@@ -1336,8 +1348,10 @@ export default {
                     await this.initialiseOrgContactTable();
                 }
             });
+            this.loading.splice('Loading Proposal', 1);
         } catch(err) {
             console.log(err);
+            this.loading.splice('Loading Proposal', 1);
         }
     },
 }

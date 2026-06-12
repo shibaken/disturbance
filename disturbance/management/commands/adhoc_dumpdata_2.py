@@ -187,90 +187,20 @@ class Command(BaseCommand):
             raise CommandError("Unknown serialization format: %s" % format)
  
         def get_objects(count_only=False):
-            '''
-                QuestionOption.objects.all().delete()
-                SectionQuestion.objects.all().delete()
-                ProposalTypeSection.objects.all().delete()
-                SpatialQueryQuestion.objects.all().delete()
-                MasterlistQuestion.objects.all().delete()
-                SpatialQueryLayer.objects.all().delete()
-                SpatialQueryQuestion.objects.all().delete()
-                SpatialQueryMetrics.objects.all().delete()
-                DASMapLayer.objects.all().delete()
-                CddpQuestionGroup.objects.all().delete()
-                GlobalSettings.objects.all().delete()
-            '''
             from itertools import chain
-            from disturbance.components.proposals.models import ProposalType, ProposalTypeSection, QuestionOption, SectionQuestion, MasterlistQuestion, SpatialQueryQuestion, DASMapLayer, CddpQuestionGroup, SpatialQueryLayer
-            from disturbance.components.main.models import GlobalSettings
+            from disturbance.components.proposals.models import ProposalType, ProposalTypeSection, QuestionOption, SectionQuestion, MasterlistQuestion
 
-            # 26 is the current pk of proposal_type on das_test for Disturbance. 
-#            pk_proposal_type = 26
+            # Assuming 18 is the current pk of proposal_type on das_uat for Disturbance. 
 
-            # disturbance.proposaltype", "pk": 18, - new version to create on PROD (current_pk + 1)
-            # replace_by 17, (curent_pk on PROD)
-            # version 13 (current_version + 1)
-            # :%s/proposal_type": 26/proposal_type": 18/g
-            #
-            # from das-uat --> ./manage_ds.py loaddata proposal_type_das.json
-
-            # 27 is the current pk of proposal_type on das_test for Ecological Thinning. 
-            pk_proposal_type = 27
-
-            # from das-test --> ./manage_ds.py adhos_dumpdata > shared/pt_v27_ET_15Oct2024.json
-            #
-            # disturbance.proposaltype", "pk": 19, - new version to create on PROD (current_pk + 1)
-            # replace_by null, (curent_pk on PROD)
-            # version 1 (current_version + 1)
-            # :%s/proposal_type": 27/proposal_type": 19/g
-            #
-            # from das-uat --> ./manage_ds.py loaddata proposal_type_et.json
-
-
-            #version_proposal_type = 11
+            pk_proposal_type = 18
             qs1 = ProposalType.objects.filter(pk=pk_proposal_type)
             qs2 = SectionQuestion.objects.filter(section__proposal_type__pk=pk_proposal_type)
             qs3 = ProposalTypeSection.objects.filter(proposal_type__id=pk_proposal_type)
             qs4 = QuestionOption.objects.filter()
-            qs5 = MasterlistQuestion.objects.filter()
-              
-            qs6 = CddpQuestionGroup.objects.filter()
-            qs7 = DASMapLayer.objects.exclude(layer_url__icontains='kmi.dbca.wa.gov.au')
-            qs8 = SpatialQueryLayer.objects.filter()
-            qs9 = SpatialQueryQuestion.objects.filter()
-            qs10 = GlobalSettings.objects.filter()
+            qs5 = MasterlistQuestion.objects.filter()              
 
-            #yield from chain(qs1)
-            yield from chain(qs1, qs2, qs3, qs4, qs5, qs6, qs7, qs8, qs9, qs10)
+            yield from chain(qs1, qs2, qs3, qs4, qs5)
 
-#        def get_objects(count_only=False):
-#            """
-#            Collate the objects to be serialized. If count_only is True, just
-#            count the number of objects to be serialized.
-#            """
-#            models = serializers.sort_dependencies(app_list.items())
-#            for model in models:
-#                if model in excluded_models:
-#                    continue
-#                if model._meta.proxy and model._meta.proxy_for_model not in models:
-#                    warnings.warn(
-#                        "%s is a proxy model and won't be serialized." % model._meta.label,
-#                        category=ProxyModelWarning,
-#                    )
-#                if not model._meta.proxy and router.allow_migrate_model(using, model):
-#                    if use_base_manager:
-#                        objects = model._base_manager
-#                    else:
-#                        objects = model._default_manager
-#
-#                    queryset = objects.using(using).order_by(model._meta.pk.name)
-#                    if primary_keys:
-#                        queryset = queryset.filter(pk__in=primary_keys)
-#                    if count_only:
-#                        yield queryset.order_by().count()
-#                    else:
-#                        for obj in queryset.iterator():
-#                            yield obj
 
         try:
             self.stdout.ending = None
