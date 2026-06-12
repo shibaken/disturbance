@@ -56,6 +56,7 @@ class EmailBase(object):
         :return:
         """
         email_instance = env('EMAIL_INSTANCE','DEV')
+        systemid = env('SYSTEM_ID','S517')
         # The next line will throw a TemplateDoesNotExist if html template cannot be found
         html_template = loader.get_template(self.html_template)
         # render html
@@ -90,7 +91,7 @@ class EmailBase(object):
             else:
                 _attachments.append(attachment)
         msg = EmailMultiAlternatives(self.subject, txt_body, from_email=from_address, to=to_addresses,
-                attachments=_attachments, cc=cc, bcc=bcc, reply_to=reply_to, headers={'System-Environment': email_instance})
+                attachments=_attachments, cc=cc, bcc=bcc, reply_to=reply_to, headers={'System-Environment': email_instance, 'ITSystem-ID': systemid +"-"+email_instance})
         msg.attach_alternative(html_body, 'text/html')
         try:
             msg.send(fail_silently=False)
@@ -125,6 +126,7 @@ class EmailBase2(object):
         :return:
         """
         email_instance = env('EMAIL_INSTANCE','DEV')
+        systemid= env('SYSTEM_ID','S517')
         # The next line will throw a TemplateDoesNotExist if html template cannot be found
         html_template = loader.get_template(self.html_template)
         # render html
@@ -159,7 +161,7 @@ class EmailBase2(object):
             else:
                 _attachments.append(attachment)
         msg = EmailMultiAlternatives(self.subject, txt_body, from_email=from_address, to=to_addresses,
-                attachments=_attachments, cc=cc, bcc=bcc, reply_to=reply_to, headers={'System-Environment': email_instance})
+                attachments=_attachments, cc=cc, bcc=bcc, reply_to=reply_to, headers={'System-Environment': email_instance, 'ITSystem-ID': systemid +"-"+email_instance})
         msg.attach_alternative(html_body, 'text/html')
         try:
             msg.send(fail_silently=False)
@@ -172,6 +174,7 @@ class EmailBase2(object):
 
 def sendHtmlEmail(to,subject,context,template,cc,bcc,from_email,template_group,attachments=None):
     email_instance = env('EMAIL_INSTANCE','DEV')
+    systemid = env('SYSTEM_ID','S517')
     email_delivery = env('EMAIL_DELIVERY', 'off')
     override_email = env('OVERRIDE_EMAIL', None)
     context['default_url'] = env('DEFAULT_HOST', '')
@@ -235,7 +238,8 @@ def sendHtmlEmail(to,subject,context,template,cc,bcc,from_email,template_group,a
             bcc = override_email.split(",")
 
     if len(to) > 1:
-        msg = EmailMultiAlternatives(subject, "Please open with a compatible html email client.", from_email=from_email, to=to, attachments=_attachments, cc=cc, bcc=bcc, reply_to=reply_to, headers={'System-Environment': email_instance})
+        msg = EmailMultiAlternatives(subject, "Please open with a compatible html email client.", from_email=from_email, to=to, attachments=_attachments, cc=cc, bcc=bcc, reply_to=reply_to, 
+                                     headers={'System-Environment': email_instance, 'ITSystem-ID': systemid +"-"+email_instance})
         msg.attach_alternative(main_template, 'text/html')
 
         #msg = EmailMessage(subject, main_template, to=[to_email],cc=cc, from_email=from_email)
@@ -250,7 +254,8 @@ def sendHtmlEmail(to,subject,context,template,cc,bcc,from_email,template_group,a
         except Exception as e:
                 email_log(str(log_hash)+' Error Sending - '+str(e))
     else:
-          msg = EmailMultiAlternatives(subject, "Please open with a compatible html email client.", from_email=from_email, to=to, attachments=_attachments, cc=cc, bcc=bcc, reply_to=reply_to, headers={'System-Environment': email_instance})
+          msg = EmailMultiAlternatives(subject, "Please open with a compatible html email client.", from_email=from_email, to=to, attachments=_attachments, cc=cc, bcc=bcc, reply_to=reply_to, 
+                                       headers={'System-Environment': email_instance, 'ITSystem-ID': systemid +"-"+email_instance})
           msg.attach_alternative(main_template, 'text/html')
 
           #msg = EmailMessage(subject, main_template, to=to,cc=cc, from_email=from_email)
