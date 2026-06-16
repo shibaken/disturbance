@@ -458,6 +458,8 @@ export default {
                 returnVal = true;
             } else if (this.proposal && !this.proposal.approval) {
                 returnVal = true;
+            } else if (this.proposal && this.proposal.proposal_type === 'Renewal') {
+                returnVal = true;
             }
             return returnVal;
         },
