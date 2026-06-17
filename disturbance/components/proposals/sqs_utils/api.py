@@ -75,11 +75,85 @@ logger = logging.getLogger(__name__)
 def get_sqs_url(url_name, user='', func=''):
     return f'{settings.SQS_APIURL}{url_name}' if f'{settings.SQS_APIURL}'.endswith('/') else f'{settings.SQS_APIURL}/{url_name}'
 
+def get_chunks(data_str):
+    # eg: for 1.5MB payload, this would create 30 chunks of 50KB each (except the last chunk which may be smaller)
+    # data_str = "abcdefghij"
+    # chunk_size = 3
+    # o/p = chunks = ['abc', 'def', 'ghi', 'j']
+    chunk_size = 1024 * 1024 * 25  # 25 MB safe under SQS limit
+    count = 0
+    chunks = []
+    
+    for i in range(0, len(data_str), chunk_size):
+        count += 1
+        chunk = data_str[i:i + chunk_size]
+        chunks.append(chunk)
+    
+    return chunks
+
 
 class ProposalSqsViewSet(viewsets.ModelViewSet):
  
     queryset = Proposal.objects.none()
     serializer_class = ProposalSerializer
+
+    def _post_sqs_chunked(self, url, data, chunk_size=None):
+        """
+        POST to SQS with chunked geojson features to prevent oversized payloads.
+        Returns the final response object (from the last chunk sent).
+        Raises ValidationError on failure.
+        """
+        if chunk_size is None:
+            chunk_size = max(1, int(getattr(settings, 'SQS_PREFILL_CHUNK_SIZE', 1)))
+
+        def chunk_list(items, size):
+            for i in range(0, len(items), size):
+                yield items[i:i + size]
+
+        features = data.get("geojson", {}).get("features", [])
+        if not features:
+            raise serializers.ValidationError('No geometry features found in uploaded shapefile.')
+
+        resp = None
+        for idx, chunk in enumerate(chunk_list(features, chunk_size), start=1):
+            payload = {
+                **data,
+                "geojson": {
+                    "type": "FeatureCollection",
+                    "features": chunk
+                }
+            }
+
+            resp = requests.post(
+                url=url,
+                data={'data': json.dumps(payload)},
+                auth=HTTPBasicAuth(settings.SQS_USER, settings.SQS_PASS),
+                verify=False,
+                timeout=settings.REQUEST_TIMEOUT,
+            )
+
+            if resp.status_code != 200:
+                logger.error(f'SpatialQuery API call error on chunk {idx}: {resp.content}')
+                try:
+                    return resp.json()
+                except Exception:
+                    return {'errors': resp.content.decode('utf-8') if isinstance(resp.content, bytes) else resp.content}
+
+            if not resp.content:
+                logger.error(f'Empty response from SQS API on chunk {idx}')
+                raise serializers.ValidationError(f'Empty response from SQS API on chunk {idx}')
+
+            try:
+                resp_data = resp.json()
+            except ValueError as e:
+                logger.error(f'JSON decode error on chunk {idx}: {e}, Response: {resp.content}')
+                raise serializers.ValidationError(f'Invalid JSON response from SQS on chunk {idx}: {str(e)}')
+
+            if 'errors' in resp_data:
+                logger.error(f'SQS error on chunk {idx}: {resp_data["errors"]}')
+                raise serializers.ValidationError(f'Error: {resp_data["errors"]}')
+
+        return resp
 
     def get_queryset(self):
         user = self.request.user
@@ -416,17 +490,80 @@ class ProposalSqsViewSet(viewsets.ModelViewSet):
 #        return Response(resp.json())
 
         url = get_sqs_url('das/task_queue')
+        auth_request = HTTPBasicAuth(settings.SQS_USER, settings.SQS_PASS)
         log_request(f'{request.user} - {self.__class__.__name__}.{inspect.currentframe().f_code.co_name} - {url}')
-        resp = requests.post(url=url, data={'data': json.dumps(data)}, auth=HTTPBasicAuth(settings.SQS_USER,settings.SQS_PASS), verify=False)
-        if resp.status_code != 200:
-            logger.error(f'SpatialQuery API call error: {resp.content}')
+        # legacy call
+        # resp = requests.post(url=url, data={'data': json.dumps(data)}, auth=HTTPBasicAuth(settings.SQS_USER,settings.SQS_PASS), verify=False)
+        # if resp.status_code != 200:
+        #     logger.error(f'SpatialQuery API call error: {resp.content}')
+        #     try:
+        #         return Response(resp.json(), status=resp.status_code)
+        #     except:
+        #         return Response({'errors': resp.content}, status=resp.status_code)
+        
+        """chunking the payload data and sending each chunk as a separate request to SQS, 
+                to avoid hitting request size limits """
+
+        data_str = json.dumps(data)
+        # Chunk the payload data
+        chunks = get_chunks(data_str)
+        total_chunks = len(chunks)
+
+        request_id = f'single-{proposal.id}-{int(time.time())}'
+        final_resp_data = None
+        final_status_code = status.HTTP_200_OK
+
+        # Send each chunk as a separate request to SQS and keep track of the final response that includes the task_id
+        i = 0
+        for chunk in chunks:
+            resp = requests.post(
+                url,
+                data={
+                    "chunk": chunk,
+                    "chunk_index": i,
+                    "total_chunks": total_chunks,
+                    "request_id": request_id
+                },
+                auth=auth_request,
+            )
+            i += 1
+            if resp.status_code not in (200, 202):
+                    logger.error(f'SpatialQuery API call error: {resp.content}')
+                    try:
+                        return Response(resp.json(), status=resp.status_code)
+                    except:
+                        return Response({'errors': resp.content.decode('utf-8') if isinstance(resp.content, bytes) else resp.content}, status=resp.status_code)
+            
+            # Handle empty response
+            if not resp.content:
+                logger.error('Empty response from SQS API')
+                return Response({'errors': 'Empty response from SQS API'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
             try:
-                return Response(resp.json(), status=resp.status_code)
-            except:
-                return Response({'errors': resp.content}, status=resp.status_code)
-         
-        #sqs_resp=(resp.json())
-        resp_data = resp.json()
+                chunk_resp_data = resp.json()
+            except ValueError as e:
+                logger.error(f'JSON decode error: {e}, Response content: {resp.content}')
+                return Response({'errors': f'Invalid JSON response from SQS: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            if 'errors' in chunk_resp_data:
+                logger.error(f'Error: {chunk_resp_data["errors"]}')
+                raise serializers.ValidationError(f'Error: {chunk_resp_data["errors"]}')
+
+            # Interim chunk acknowledgements (eg "Chunk received (x/y)") are expected.
+            # Keep the first response that includes a task_id as the final payload.
+            if isinstance(chunk_resp_data, dict) and chunk_resp_data.get('data', {}).get('task_id'):
+                final_resp_data = chunk_resp_data
+                final_status_code = resp.status_code
+            
+        if not final_resp_data:
+            logger.error(f'No final task response received from SQS for request_id={request_id}')
+            return Response(
+                {'errors': 'SQS accepted chunks but did not return a final task response.'},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        # At this point, we have the final response from SQS that includes the task_id, and we can proceed to create the TaskMonitor entry and return the response to the client.   
+        # resp_data = resp.json()
+        resp_data = final_resp_data
         if 'errors' in resp_data:
             logger.error(f'Error: {resp_data["errors"]}')
             raise serializers.ValidationError(f'Error: {resp_data["errors"]}')
@@ -453,8 +590,8 @@ class ProposalSqsViewSet(viewsets.ModelViewSet):
         action = ProposalUserAction.ACTION_SEND_TEST_SQQ_REQUEST_TO.format(proposal.lodgement_number, task.id, sqs_task_id, 0)
         ProposalUserAction.log_action(proposal, action, request.user)
 
-        #return Response(resp_data, status=resp.status_code)
-        return Response(resp_data, status=resp.status_code)
+        # return Response(resp_data, status=resp.status_code)
+        return Response(resp_data, status=final_status_code)
 
 
 #    def filter_expired_questions(self, spatial_query_question_list):
@@ -814,22 +951,81 @@ class ProposalSqsViewSet(viewsets.ModelViewSet):
         #url = f'{settings.SQS_APIURL}spatial_query/' if f'{settings.SQS_APIURL}'.endswith('/') else f'{settings.SQS_APIURL}/spatial_query/'
         #url = get_sqs_url('das/spatial_query/')
         url = get_sqs_url('das/task_queue')
+        auth_request = HTTPBasicAuth(settings.SQS_USER, settings.SQS_PASS)
         log_request(f'{request.user} - {self.__class__.__name__}.{inspect.currentframe().f_code.co_name} - {url}')
-        resp = requests.post(url=url, data={'data': json.dumps(data)}, auth=HTTPBasicAuth(settings.SQS_USER,settings.SQS_PASS), verify=False)
-        if resp.status_code != 200:
-            if resp.status_code != 208:
-                logger.error(f'SpatialQuery API call error: {resp.content}')
-            try:
-                return Response(resp.json(), status=resp.status_code)
-            except:
-                return Response({'errors': resp.content}, status=resp.status_code)
-              
-        #sqs_resp=(resp.json())
-        resp_data = resp.json()
-        if 'errors' in resp_data:
-            logger.error(f'Error: {resp_data["errors"]}')
-            raise serializers.ValidationError(f'Error: {resp_data["errors"]}')
+        # legacy call
+        # resp = requests.post(url=url, data={'data': json.dumps(data)}, auth=HTTPBasicAuth(settings.SQS_USER,settings.SQS_PASS), verify=False)
+        # if resp.status_code != 200:
+        #     if resp.status_code != 208:
+        #         logger.error(f'SpatialQuery API call error: {resp.content}')
+        #     try:
+        #         return Response(resp.json(), status=resp.status_code)
+        #     except:
+        #         return Response({'errors': resp.content}, status=resp.status_code)
+        
+        """chunking the payload data and sending each chunk as a separate request to SQS, 
+                to avoid hitting request size limits """
 
+        data_str = json.dumps(data)
+        # Chunk the payload data
+        chunks = get_chunks(data_str)
+        total_chunks = len(chunks)
+
+        request_id = f'refresh-{proposal.id}-{int(time.time())}'
+        final_resp_data = None
+        final_status_code = status.HTTP_200_OK
+
+        # Send each chunk as a separate request to SQS and keep track of the final response that includes the task_id
+        i = 0
+        for chunk in chunks:
+            resp = requests.post(
+                url,
+                data={
+                    "chunk": chunk,
+                    "chunk_index": i,
+                    "total_chunks": total_chunks,
+                    "request_id": request_id
+                },
+                auth=auth_request,
+            )
+            i += 1
+            if resp.status_code not in (200, 202):
+                    logger.error(f'SpatialQuery API call error: {resp.content}')
+                    try:
+                        return Response(resp.json(), status=resp.status_code)
+                    except:
+                        return Response({'errors': resp.content.decode('utf-8') if isinstance(resp.content, bytes) else resp.content}, status=resp.status_code)
+            
+            # Handle empty response
+            if not resp.content:
+                logger.error('Empty response from SQS API')
+                return Response({'errors': 'Empty response from SQS API'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            try:
+                chunk_resp_data = resp.json()
+            except ValueError as e:
+                logger.error(f'JSON decode error: {e}, Response content: {resp.content}')
+                return Response({'errors': f'Invalid JSON response from SQS: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            if 'errors' in chunk_resp_data:
+                logger.error(f'Error: {chunk_resp_data["errors"]}')
+                raise serializers.ValidationError(f'Error: {chunk_resp_data["errors"]}')
+
+            # Interim chunk acknowledgements (eg "Chunk received (x/y)") are expected.
+            # Keep the first response that includes a task_id as the final payload.
+            if isinstance(chunk_resp_data, dict) and chunk_resp_data.get('data', {}).get('task_id'):
+                final_resp_data = chunk_resp_data
+                final_status_code = resp.status_code
+            
+        if not final_resp_data:
+            logger.error(f'No final task response received from SQS for request_id={request_id}')
+            return Response(
+                {'errors': 'SQS accepted chunks but did not return a final task response.'},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        # At this point, we have the final response from SQS that includes the task_id, and we can proceed to create the TaskMonitor entry and return the response to the client.   
+        # resp_data = resp.json()
+        resp_data = final_resp_data
         sqs_task_id = resp_data['data']['task_id']
         task, created = TaskMonitor.objects.get_or_create(
                 task_id=sqs_task_id,
@@ -851,7 +1047,8 @@ class ProposalSqsViewSet(viewsets.ModelViewSet):
         action = ProposalUserAction.ACTION_SEND_REFRESH_REQUEST_TO.format(proposal.lodgement_number, task.id, sqs_task_id, resp_data['position'])
         ProposalUserAction.log_action(proposal, action, request.user)
 
-        return Response(resp_data, status=resp.status_code)
+        # return Response(resp_data, status=resp.status_code)
+        return Response(resp_data, status=final_status_code)
 
 
     @action(methods=['post'], detail=True)
@@ -1022,32 +1219,97 @@ class ProposalSqsViewSet(viewsets.ModelViewSet):
                 )
 
 
-                #url = get_sqs_url('das/spatial_query/')
                 url = get_sqs_url('das/task_queue')
-                #url = get_sqs_url('das_queue/')
+                auth_request = HTTPBasicAuth(settings.SQS_USER, settings.SQS_PASS)
                 log_request(f'{request.user} - {self.__class__.__name__}.{inspect.currentframe().f_code.co_name} - {url}')
-                resp = requests.post(url=url, data={'data': json.dumps(data)}, auth=HTTPBasicAuth(settings.SQS_USER,settings.SQS_PASS))
-                if resp.status_code != 200:
-                    logger.error(f'SpatialQuery API call error: {resp.content}')
+                
+                # resp = requests.post(url=url, data={'data': json.dumps(data)}, auth=HTTPBasicAuth(settings.SQS_USER,settings.SQS_PASS))
+                # if resp.status_code != 200:
+                #     logger.error(f'SpatialQuery API call error: {resp.content}')
+                #     try:
+                #         return Response(resp.json(), status=resp.status_code)
+                #     except:
+                #         return Response({'errors': resp.content.decode('utf-8') if isinstance(resp.content, bytes) else resp.content}, status=resp.status_code)
+                
+                # # Handle empty response
+                # if not resp.content:
+                #     logger.error('Empty response from SQS API')
+                #     return Response({'errors': 'Empty response from SQS API'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                
+                # try:
+                #     resp_data = resp.json()
+                # except ValueError as e:
+                #     logger.error(f'JSON decode error: {e}, Response content: {resp.content}')
+                #     return Response({'errors': f'Invalid JSON response from SQS: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                
+                # if 'errors' in resp_data:
+                #     logger.error(f'Error: {resp_data["errors"]}')
+                #     raise serializers.ValidationError(f'Error: {resp_data["errors"]}')
+                
+                """chunking the payload data and sending each chunk as a separate request to SQS, 
+                to avoid hitting request size limits """
+
+                data_str = json.dumps(data)
+                # Chunk the payload data
+                chunks = get_chunks(data_str)
+                total_chunks = len(chunks)
+
+                request_id = f'prefill-{proposal.id}-{int(time.time())}'
+                final_resp_data = None
+                final_status_code = status.HTTP_200_OK
+
+                # Send each chunk as a separate request to SQS and keep track of the final response that includes the task_id
+                i = 0
+                for chunk in chunks:
+                    resp = requests.post(
+                        url,
+                        data={
+                            "chunk": chunk,
+                            "chunk_index": i,
+                            "total_chunks": total_chunks,
+                            "request_id": request_id
+                        },
+                        auth=auth_request,
+                    )
+                    i += 1
+
+
+                    if resp.status_code not in (200, 202):
+                        logger.error(f'SpatialQuery API call error: {resp.content}')
+                        try:
+                            return Response(resp.json(), status=resp.status_code)
+                        except:
+                            return Response({'errors': resp.content.decode('utf-8') if isinstance(resp.content, bytes) else resp.content}, status=resp.status_code)
+                
+                    # Handle empty response
+                    if not resp.content:
+                        logger.error('Empty response from SQS API')
+                        return Response({'errors': 'Empty response from SQS API'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
                     try:
-                        return Response(resp.json(), status=resp.status_code)
-                    except:
-                        return Response({'errors': resp.content.decode('utf-8') if isinstance(resp.content, bytes) else resp.content}, status=resp.status_code)
+                        chunk_resp_data = resp.json()
+                    except ValueError as e:
+                        logger.error(f'JSON decode error: {e}, Response content: {resp.content}')
+                        return Response({'errors': f'Invalid JSON response from SQS: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                    if 'errors' in chunk_resp_data:
+                        logger.error(f'Error: {chunk_resp_data["errors"]}')
+                        raise serializers.ValidationError(f'Error: {chunk_resp_data["errors"]}')
+
+                    # Interim chunk acknowledgements (eg "Chunk received (x/y)") are expected.
+                    # Keep the first response that includes a task_id as the final payload.
+                    if isinstance(chunk_resp_data, dict) and chunk_resp_data.get('data', {}).get('task_id'):
+                        final_resp_data = chunk_resp_data
+                        final_status_code = resp.status_code
                 
-                # Handle empty response
-                if not resp.content:
-                    logger.error('Empty response from SQS API')
-                    return Response({'errors': 'Empty response from SQS API'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                
-                try:
-                    resp_data = resp.json()
-                except ValueError as e:
-                    logger.error(f'JSON decode error: {e}, Response content: {resp.content}')
-                    return Response({'errors': f'Invalid JSON response from SQS: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                
-                if 'errors' in resp_data:
-                    logger.error(f'Error: {resp_data["errors"]}')
-                    raise serializers.ValidationError(f'Error: {resp_data["errors"]}')                       
+                if not final_resp_data:
+                    logger.error(f'No final task response received from SQS for request_id={request_id}')
+                    return Response(
+                        {'errors': 'SQS accepted chunks but did not return a final task response.'},
+                        status=status.HTTP_502_BAD_GATEWAY,
+                    )
+                # At this point, we have the final response from SQS that includes the task_id, and we can proceed to create the TaskMonitor entry and return the response to the client.   
+                resp_data = final_resp_data
                 
                 sqs_task_id = resp_data['data']['task_id']
                 task, created = TaskMonitor.objects.get_or_create(
@@ -1069,7 +1331,8 @@ class ProposalSqsViewSet(viewsets.ModelViewSet):
                 action = ProposalUserAction.ACTION_SEND_PREFILL_REQUEST_TO.format(proposal.lodgement_number, task.id, sqs_task_id, resp_data['position'])
                 ProposalUserAction.log_action(proposal, action, request.user)
 
-                return Response(resp_data, status=resp.status_code)
+                # return Response(resp_data, status=resp.status_code)
+                return Response(resp_data, status=final_status_code)
             else:
                 raise serializers.ValidationError(str('Please upload a valid shapefile'))                 
 
