@@ -1,6 +1,6 @@
 <template>
   <div v-if="apiaryTemplateGroup" class="privacy-notice-container">
-    <div class="panel panel-default">
+    <div class="panel panel-info">
       <div class="panel-heading" @click="toggleCollapse" style="cursor: pointer;">
         <h4 class="panel-title">
           Personal Information Collection Notice
@@ -77,10 +77,6 @@ export default {
 <style scoped>
 .privacy-notice-container {
   margin-bottom: 20px;
-}
-
-.panel-heading {
-  background-color: #f5f5f5;
 }
 
 .panel-title {
