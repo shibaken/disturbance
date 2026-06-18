@@ -1,5 +1,6 @@
 <template>
 <div class="container">
+    <PrivacyNotice />
     <div v-if="approvalId">
         <div v-if="apiaryApproval">
             <ApiaryApproval 
@@ -23,6 +24,7 @@
 
 import ApiaryApproval from './apiary_approval.vue';
 import Approval from './approval.vue';
+import PrivacyNotice from '@/components/common/privacy_notice.vue';
 import Vue from 'vue';
 import {
   api_endpoints,
@@ -41,6 +43,7 @@ export default {
     components:{
         Approval,
         ApiaryApproval,
+        PrivacyNotice,
     },
     watch: {},
     computed: {
