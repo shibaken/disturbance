@@ -24,13 +24,13 @@
                 <a class="collapse-link-top float-end" @click.prevent="expand">
                     <i class="bi bi-chevron-down"></i>
                 </a>
+                <a class="collapse-link-bottom float-end" @click.prevent="minimize">
+                    <i class="bi bi-chevron-up"></i>
+                </a>
                 <div class="collapse show" style="padding-left: 0px"></div>
                 <span v-if="isPreviewMode && !isRemovable">
                     <a :id="'remove_'+name">Remove {{ label }}</a>
                 </span>
-                <a class="collapse-link-bottom float-end" @click.prevent="minimize">
-                    <i class="bi bi-chevron-up"></i>
-                </a>
                 <div :class="{ 'row': true, 'collapse': true, 'show': isExpanded }" style="margin-top: 10px;">
                     <div class="col-12">
                         <slot></slot>
@@ -72,5 +72,17 @@ export default {
 <style lang="css">
     .collapse-link-top,.collapse-link-bottom{
         cursor:pointer;
+    }
+
+    @media print {
+        .row.collapse {
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+        }
+
+        .row.collapse > .col-12 {
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
     }
 </style>
