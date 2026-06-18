@@ -1,5 +1,6 @@
 <template>
 <div class="container">
+    <PrivacyNotice />
     <div v-if="proposalId">
         <div v-if="temporaryProposal">
             <ProposalTemporaryUse 
@@ -20,6 +21,7 @@ import Vue from 'vue';
 import { api_endpoints, helpers } from '@/utils/hooks'
 import ProposalTemporaryUse from '@/components/external/proposal_temporary_use.vue'
 import Proposal from '@/components/external/proposal_external.vue'
+import PrivacyNotice from '@/components/common/privacy_notice.vue'
 
 export default {
     name: 'ExternalProposalWrapper',
@@ -33,6 +35,7 @@ export default {
     components:{
         ProposalTemporaryUse,
         Proposal,
+        PrivacyNotice,
     },
     computed: {
         temporaryProposal: function() {

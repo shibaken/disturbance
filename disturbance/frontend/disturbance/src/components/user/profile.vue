@@ -1,5 +1,6 @@
 <template>
     <div class="container" id="userInfo">
+        <PrivacyNotice />
         <div v-if="showCompletion" class="row">
             <div class="col-sm-12">
                 <div class="well well-sm">
@@ -294,6 +295,7 @@
 import Vue from 'vue'
 import $ from 'jquery'
 import { api_endpoints, helpers } from '@/utils/hooks'
+import PrivacyNotice from '@/components/common/privacy_notice.vue'
 export default {
     name: 'Profile',
     data () {
@@ -370,6 +372,9 @@ export default {
                 this.addingCompany=false
             }
         },
+    },
+    components: {
+        PrivacyNotice
     },
     computed: {
         organisationSectionTitleText: function() {

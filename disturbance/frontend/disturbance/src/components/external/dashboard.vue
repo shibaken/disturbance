@@ -1,5 +1,6 @@
 <template>
 <div class="container" id="externalDash">
+    <PrivacyNotice />
     <div v-if="show_das_change_msg && dasTemplateGroup" class="row">
         <div class="col-sm-12">
             <div class="alert alert-info">
@@ -50,6 +51,7 @@ import ProposalDashTable from '@common-utils/proposals_dashboard.vue'
 import ApprovalDashTable from '@common-utils/approvals_dashboard.vue'
 import ComplianceDashTable from '@common-utils/compliances_dashboard.vue'
 import MapDashboard from '@/components/common/das/map_dashboard_internal.vue'
+import PrivacyNotice from '@/components/common/privacy_notice.vue'
 import {
   api_endpoints,
   helpers
@@ -82,7 +84,8 @@ export default {
         ProposalDashTable,
         ApprovalDashTable,
         ComplianceDashTable,
-        MapDashboard
+        MapDashboard,
+        PrivacyNotice
     },
     watch: {},
     computed: {

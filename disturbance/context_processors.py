@@ -39,4 +39,5 @@ def apiary_url(request):
         'SHOW_DAS_MAP': settings.SHOW_DAS_MAP,
         'MAX_LAYERS_PER_SQQ': settings.MAX_LAYERS_PER_SQQ,
         'SHOW_DAS_CHANGE_MSG': settings.SHOW_DAS_CHANGE_MSG,
+        'PRIVACY_POLICY_URL': settings.PRIVACY_POLICY_URL,
     }
