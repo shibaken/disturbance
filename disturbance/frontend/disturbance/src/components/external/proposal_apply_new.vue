@@ -26,7 +26,7 @@
                             </div> 
 
                             <div v-if="proposal.region">
-                                <label for="" class="control-label" style="font-weight: normal;">District <a :href="district_help_url" target="_blank"><i class="fa fa-question-circle" style="color:blue">&nbsp;</i></a></label>
+                                <label for="" class="control-label">District <a :href="district_help_url" target="_blank"><i class="fa fa-question-circle" style="color:blue">&nbsp;</i></a></label>
                                 <div v-if="proposal.readonly" class="col-sm-12">
                                         <div class="form-group">
                                             <label for="" class="control-label" >{{proposal.district_name}}</label>
