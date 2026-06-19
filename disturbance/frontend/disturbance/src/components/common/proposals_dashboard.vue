@@ -403,6 +403,7 @@ export default {
                     },
                     defaultContent: '',
                     orderable: true,
+                    name: 'id,lodgement_number',
                     searchable: true,
                 },
             ];

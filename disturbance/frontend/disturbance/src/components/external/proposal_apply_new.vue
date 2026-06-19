@@ -4,7 +4,7 @@
             <!-- <div class="col-sm-3"></div> -->
             <div class="">
                 <form class="form-horizontal" name="personal_form" method="post">
-                    <FormSection :formCollapse="false" label="Region, District, Activity Type, Sub Activity, ..." Index="3">   
+                    <FormSection :formCollapse="false" label="Region and Proposal Details for Approval" Index="3">
                         <div>
                             <div v-if="proposal">
                                 <label for="" class="control-label" >Region * <a :href="region_help_url" target="_blank"><i class="fa fa-question-circle" style="color:blue">&nbsp;</i></a> </label>
@@ -26,7 +26,7 @@
                             </div> 
 
                             <div v-if="proposal.region">
-                                <label for="" class="control-label" style="font-weight: normal;">District <a :href="district_help_url" target="_blank"><i class="fa fa-question-circle" style="color:blue">&nbsp;</i></a></label>
+                                <label for="" class="control-label">District <a :href="district_help_url" target="_blank"><i class="fa fa-question-circle" style="color:blue">&nbsp;</i></a></label>
                                 <div v-if="proposal.readonly" class="col-sm-12">
                                         <div class="form-group">
                                             <label for="" class="control-label" >{{proposal.district_name}}</label>
@@ -103,7 +103,7 @@
 								</div>
 
 								<div v-if="categories.length > 0">
-									<label for="" class="control-label" >Category * <a :href="category_help_url" target="_blank"><i class="fa fa-question-circle" style="color:blue">&nbsp;</i></a></label>
+									<label for="" class="control-label" >Category/Management Area* <a :href="category_help_url" target="_blank"><i class="fa fa-question-circle" style="color:blue">&nbsp;</i></a></label>
 									<div v-if="proposal.readonly" class="col-sm-12">
                                         <div class="form-group">
                                             <label for="" class="control-label" >{{proposal.management_area}}</label>
