@@ -369,6 +369,7 @@ class OrganisationViewSet(viewsets.ModelViewSet):
             print(traceback.print_exc())
             raise
         except ValidationError as e:
+            print(traceback.print_exc())
             handle_validation_error(e)
         except Exception as e:
             print(traceback.print_exc())
