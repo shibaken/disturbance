@@ -97,6 +97,7 @@ class ProposalSqsViewSet(viewsets.ModelViewSet):
     queryset = Proposal.objects.none()
     serializer_class = ProposalSerializer
 
+    #  not used
     def _post_sqs_chunked(self, url, data, chunk_size=None):
         """
         POST to SQS with chunked geojson features to prevent oversized payloads.
@@ -200,6 +201,7 @@ class ProposalSqsViewSet(viewsets.ModelViewSet):
             print(traceback.print_exc())
             raise
         except ValidationError as e:
+            print(traceback.print_exc())
             handle_validation_error(e)
         except Exception as e:
             print(traceback.print_exc())
@@ -219,6 +221,7 @@ class ProposalSqsViewSet(viewsets.ModelViewSet):
             print(traceback.print_exc())
             raise
         except ValidationError as e:
+            print(traceback.print_exc())
             handle_validation_error(e)
         except Exception as e:
             print(traceback.print_exc())
