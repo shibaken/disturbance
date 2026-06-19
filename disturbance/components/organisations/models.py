@@ -1,6 +1,7 @@
 from __future__ import unicode_literals
 
 from django.db import models, transaction
+from django.db.models import Exists, OuterRef
 from django.contrib.sites.models import Site
 from django.dispatch import receiver
 from django.db.models.signals import pre_delete
@@ -472,8 +473,20 @@ class Organisation(models.Model):
 
     @property
     def first_five_admin_names(self):
-        qs= OrganisationContact.objects.filter(user_role='organisation_admin', is_admin=True, user_status='active', organisation=self)
-        if qs:
+        qs = OrganisationContact.objects.filter(
+            user_role='organisation_admin',
+            is_admin=True,
+            user_status='active',
+            organisation=self,
+        ).annotate(
+            has_delegation=Exists(
+                UserDelegation.objects.filter(
+                    organisation=self,
+                    user__email=OuterRef('email')
+                )
+            )
+        ).filter(has_delegation=True)
+        if qs.exists():
             return ','.join(['{} {}'.format(user.first_name, user.last_name) for user in qs[:5]])
         return self.first_five
 
@@ -563,7 +576,7 @@ class OrganisationAction(UserAction):
 
     ACTION_UPDATE_ORGANISATION = "Updated organisation name"
     ACTION_UPDATE_ADDRESS = "Updated address"
-    ACTION_UPDATE_CONTACTS = "Updated contacts"
+    ACTION_UPDATE_CONTACTS = "Updated contacts {} {} ({})"
 
     @classmethod
     def log_action(cls, organisation, action, user):
