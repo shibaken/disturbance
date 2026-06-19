@@ -103,7 +103,7 @@
 								</div>
 
 								<div v-if="categories.length > 0">
-									<label for="" class="control-label" >Category * <a :href="category_help_url" target="_blank"><i class="fa fa-question-circle" style="color:blue">&nbsp;</i></a></label>
+									<label for="" class="control-label" >Category/Management Area* <a :href="category_help_url" target="_blank"><i class="fa fa-question-circle" style="color:blue">&nbsp;</i></a></label>
 									<div v-if="proposal.readonly" class="col-sm-12">
                                         <div class="form-group">
                                             <label for="" class="control-label" >{{proposal.management_area}}</label>
