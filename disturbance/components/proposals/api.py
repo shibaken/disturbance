@@ -2295,7 +2295,13 @@ class SearchProposalTypeViewSet(viewsets.ReadOnlyModelViewSet):
             Prefetch(
                 'sections',
                 # queryset=ProposalTypeSection.objects.order_by('index')
-                queryset=ProposalTypeSection.objects.filter(add_to_search_select=True).order_by('index')
+                queryset=ProposalTypeSection.objects.filter(add_to_search_select=True).order_by('index').prefetch_related(
+                    Prefetch(
+                        'section_questions',
+                        queryset=SectionQuestion.objects.order_by('order')
+                    )
+                )
+
             )
         )
 
