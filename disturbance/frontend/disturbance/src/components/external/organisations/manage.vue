@@ -830,20 +830,22 @@ export default {
                             if (!response.ok) {
 
                                 // Check for specific status code
-                                if (response.status === 500) {
-                                    swal.fire({
-                                        title:'Unlink',
-                                        text:'Last Organisation Admin cannot be unlinked.',
-                                        icon:'error',
-                                        customClass: {
-                                            confirmButton: 'btn btn-primary',
-                                        },
-                                    });
-                                    return;
-                                } else {
-                                    console.log(JSON.stringify(await response.json()));
-                                    throw new Error(`Unlink user failed: ${response.status}`);
-                                }
+                                // if (response.status === 500) {
+                                //     swal.fire({
+                                //         title:'Unlink',
+                                //         text:'500 Last Organisation Admin cannot be unlinked.',
+                                //         icon:'error',
+                                //         customClass: {
+                                //             confirmButton: 'btn btn-primary',
+                                //         },
+                                //     });
+                                //     return;
+                                // } else {
+                                //     console.log(JSON.stringify(await response.json()));
+                                //     //throw new Error(`Unlink user failed: ${response.status}`);
+                                //     throw new Error(await helpers.parseApiError(response));
+                                // }
+                                throw new Error(await helpers.parseApiError(response));
 
                             }
 
@@ -863,7 +865,15 @@ export default {
                                 console.log(error);
                             });
                         }).catch((error) => {
-                            console.log(error);
+                            swal.fire({
+                                title:'Organisation Unlink Error',
+                                text: error.message || 'There was an error unlinking ' + name + ' from the Organisation.',
+                                icon:'error',  
+                                customClass: {
+                                    confirmButton: 'btn btn-primary',
+                                },
+                            });
+                            console.log(error?.message || JSON.stringify(error));
                         });
                     }
                 },(error) => {
@@ -989,7 +999,7 @@ export default {
                             });
                         }).catch((error) => {
                             swal.fire({
-                                title:'Company Admin Error',
+                                title:'Organisation User Error',
                                 text: error.message || 'There was an error making ' + name + ' an Organisation User.',
                                 icon:'error',  
                                 customClass: {
