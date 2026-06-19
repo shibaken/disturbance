@@ -4,7 +4,7 @@
             <!-- <div class="col-sm-3"></div> -->
             <div class="">
                 <form class="form-horizontal" name="personal_form" method="post">
-                    <FormSection :formCollapse="false" label="Region, District, Activity Type, Sub Activity, ..." Index="3">   
+                    <FormSection :formCollapse="false" label="Region and Proposal Details for Approval" Index="3">
                         <div>
                             <div v-if="proposal">
                                 <label for="" class="control-label" >Region * <a :href="region_help_url" target="_blank"><i class="fa fa-question-circle" style="color:blue">&nbsp;</i></a> </label>
