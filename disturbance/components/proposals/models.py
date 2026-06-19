@@ -3164,8 +3164,15 @@ def search_sections(proposal_type_id, section_label,question_id,option_label,is_
                                 'number': p.lodgement_number,
                                 'id': p.id,
                                 'type': 'Proposal',
+                                'question': question.question,
+                                'answer': option_label,
                                 'applicant': p.applicant.name,
+                                'activity': p.activity,
+                                'region': p.region.name,
+                                'district': p.district.name,
+                                'lodgement_date': p.lodgement_date,
                                 'text': results[0],
+                                'status': p.get_processing_status_display(),
                                 }
                             res_qs.append(res)
                     except Exception as e:

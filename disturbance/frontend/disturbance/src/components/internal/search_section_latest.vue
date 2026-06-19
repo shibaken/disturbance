@@ -183,7 +183,7 @@ import datatable from '@/utils/vue/datatable.vue'
 import FormSection from '@/components/forms/section_toggle.vue';
 import {
   api_endpoints,
-  // helpers,
+  helpers,
   constants
 }
 from '@/utils/hooks'
@@ -215,6 +215,7 @@ export default {
       form: null,
       pBody: 'pBody' + uuidv4(),
       pBody2: 'pBody2' + uuidv4(),
+      dateFormat: 'DD/MM/YYYY',
 
       selected_application_name: '',
       selected_proposal_type_id: null,
@@ -251,7 +252,7 @@ export default {
             },
       site_url: (api_endpoints.site_url.endsWith("/")) ? (api_endpoints.site_url): (api_endpoints.site_url + "/"),
       datatable_id: 'proposal-datatable-'+uuidv4(),
-      proposal_headers:["Number","Type","Proponent","Text found","Action"],
+      proposal_headers:["Number","Type","Question","Answer","Proponent","Activity","Region","District","Lodged on","Status","Text found","Action"],
       proposal_options:{
           language: {
               processing: constants.DATATABLE_PROCESSING_HTML,
@@ -283,7 +284,30 @@ export default {
           columns: [
               {data: "number"},
               {data:"type"},
+              {
+                data: "question",
+                'render': function (value) {
+                    return helpers.dtPopover(value);
+                },
+              },
+              {
+                data: "answer",
+                'render': function (value) {
+                    return helpers.dtPopover(value);
+                },
+              },
               {data: "applicant"},
+              {data: "activity"},
+              {data: "region"},
+              {data: "district"},
+              {
+                    // 7. Lodged on
+                    data: "lodgement_date",
+                    mRender:function (data) {
+                        return data != '' && data  != null ? moment(data).format(vm.dateFormat): '';
+                    },
+              },
+              {data: "status"},
               {//data: "text.value"
                 data: "text",
                 mRender: function (data) {
@@ -316,6 +340,10 @@ export default {
           processing: true,
           initComplete: function() {
                     $('#loadingSpinner2').hide();
+                    helpers.enablePopovers();
+          },
+          drawCallback: function () {
+              helpers.enablePopovers();
           },
       }
     }
