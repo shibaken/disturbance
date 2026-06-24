@@ -10,7 +10,7 @@
                             <div class="form-group">
                                     <div v-show="select2Applied" id="region-filter">
                                         <label for="">Region</label>
-                                        <select style="width:100%" class="form-select form-select-sm" ref="filterRegion" >
+                                        <select style="width:100%" class="form-select form-select-sm" ref="filterRegion">
                                             <template v-if="select2Applied">
                                                 <option v-for="r in proposal_regions" :value="r" :key="r">{{r}}</option>
                                             </template>
@@ -258,11 +258,15 @@ export default {
 
         },
         filterProposalRegion: function(){
+            // Re-fetch activities, submitters, applicants filtered by selected region
+            this.fetchDependentFilterLists('region');
             this.$refs.proposal_datatable.vmDataTable.draw();
             //let vm = this;
             //vm.$refs.proposal_datatable.vmDataTable.columns(1).search(vm.filterProposalRegion.join()).draw();
         },
         filterProposalDistrict: function(){
+            // Re-fetch activities, submitters, applicants filtered by selected district
+            this.fetchDependentFilterLists('district');
             this.$refs.proposal_datatable.vmDataTable.draw();
         },
         filterProposalActivity: function() {
@@ -731,35 +735,80 @@ export default {
             }
         },
 
+        // Builds the filter_list API URL with optional organisation_id, regions and districts params
+        buildFilterListUrl: function(regions, districts) {
+            let vm = this;
+            let params = new URLSearchParams();
+            if (vm.organisation_id) {
+                params.append('organisation_id', vm.organisation_id);
+            }
+            if (regions && regions.length) {
+                params.append('regions', regions.join(','));
+            }
+            if (districts && districts.length) {
+                params.append('districts', districts.join(','));
+            }
+            let url = api_endpoints.filter_list;
+            let qs = params.toString();
+            if (qs) {
+                url += '?' + qs;
+            }
+            return url;
+        },
+
         fetchFilterLists: function(){
             let vm = this;
-            //fetch('/api/list_proposal/filter_list/').then((response) => {
-            let url = api_endpoints.filter_list;
-            if (vm.organisation_id) {
-                url += `?organisation_id=${encodeURIComponent(vm.organisation_id)}`;
-            }
-
-            fetch(
-                url
-            ).then( async (response) => {
+            // let url = api_endpoints.filter_list;
+            // if (vm.organisation_id) {
+            //     url += `?organisation_id=${encodeURIComponent(vm.organisation_id)}`;
+            // }
+            // Builds the filter_list API URL with optional organisation_id, regions and districts params
+            let url = vm.buildFilterListUrl([], []);
+            fetch(url).then( async (response) => {
                 if (!response.ok) {
                     return response.json().then(err => { throw err });
                 }
-                vm.filterListsProposal = await response.json();
-                vm.proposal_regions = vm.filterListsProposal.regions;
-                vm.proposal_districts = vm.filterListsProposal.districts;
-
-                vm.proposal_activityTitles = vm.filterListsProposal.activities;
-                vm.proposal_applicationTypes = vm.filterListsProposal.application_types;
-                //vm.proposal_activityTitles.push('Apiary');
-
-                vm.proposal_submitters = vm.filterListsProposal.submitters;
-                vm.proposal_applicants = vm.filterListsProposal.applicants;
-                //vm.proposal_status = vm.level == 'internal' ? response.body.processing_status_choices: response.body.customer_status_choices;
-                vm.proposal_status = vm.level == 'internal' ? vm.internal_status: vm.external_status;
+                let data = await response.json();
+                vm.filterListsProposal = data;
+                vm.proposal_regions = data.regions;
+                vm.proposal_districts = data.districts;
+                vm.proposal_activityTitles = data.activities;
+                vm.proposal_applicationTypes = data.application_types;
+                vm.proposal_submitters = data.submitters;
+                vm.proposal_applicants = data.applicants;
+                vm.proposal_status = vm.level == 'internal' ? vm.internal_status : vm.external_status;
             }).catch(error => {
                 console.log(error);
-            })
+            });
+        },
+
+        // Called when region or district selection changes.
+        // Re-calls filter_list with the selected regions/districts so that
+        // activities, submitters and applicants are narrowed to matching proposals.
+        fetchDependentFilterLists: function(source){
+            let vm = this;
+            let url = vm.buildFilterListUrl(vm.filterProposalRegion, vm.filterProposalDistrict);
+            fetch(url).then( async (response) => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw err });
+                }
+                let data = await response.json();
+                vm.proposal_districts = data.districts;
+                vm.proposal_activityTitles = data.activities;
+                vm.proposal_submitters = data.submitters;
+                vm.proposal_applicants = data.applicants;
+                
+                // Reset selections to 'All'
+                if (source === 'region' && vm.filterProposalDistrict.length>0) {
+                    vm.filterProposalDistrict = [];
+                    $(vm.$refs.filterDistrict).val(null).trigger('change')
+                }
+                vm.filterProposalActivity = 'All';
+                vm.filterProposalSubmitter = 'All';
+                vm.filterProposalApplicant = 'All';
+            }).catch(error => {
+                console.log(error);
+            });
         },
 
         discardProposal:function (proposal_id) {
