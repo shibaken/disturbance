@@ -662,11 +662,15 @@ class ProposalViewSet(viewsets.ModelViewSet):
         """ Used by the internal/external dashboard filters """
         template_group = get_template_group(request)
         organisation_id = request.query_params.get('organisation_id')
+        # Accept optional region/district params to narrow dependent filter lists
+        regions_param = request.query_params.get('regions', '')
+        districts_param = request.query_params.get('districts', '')
         region_qs = []
+        district_qs = []
         activity_qs = []
         application_type_qs = []
         applicant_qs = []
-        # import ipdb; ipdb.set_trace()
+        submitter_qs = []
         if template_group == 'das':
             qs = self.get_queryset()
             apiary_proposal_types=['Apiary','Site Transfer','Temporary Use']
@@ -675,17 +679,33 @@ class ProposalViewSet(viewsets.ModelViewSet):
                     )
             if organisation_id:
                 qs = qs.filter(applicant_id=organisation_id)
-            region_qs =  qs.filter(region__isnull=False).values_list('region__name', flat=True).distinct()
-            district_qs =  qs.filter(district__isnull=False).values_list('district__name', flat=True).distinct()
-            submitter_qs = qs.filter(submitter__isnull=False).distinct(
+            # Regions always returned unfiltered so the dropdowns stay complete
+            region_qs = qs.filter(region__isnull=False).values_list('region__name', flat=True).distinct()
+            district_qs = qs.filter(district__isnull=False).values_list('district__name', flat=True).distinct()
+
+            # Apply region/district filters to narrow activities, submitters and applicants.
+            # Previously these three queries ran directly against qs (no region/district filtering):
+            #   submitter_qs = qs.filter(submitter__isnull=False).distinct('submitter__email')
+            #                     .values_list('submitter__first_name','submitter__last_name','submitter__email')
+            #   applicant_qs = qs.filter(applicant__isnull=False).distinct('applicant_id')
+            #                     .values_list('applicant_id','applicant__organisation__name')
+            #   activity_qs  = qs.filter(activity__isnull=False).values_list('activity', flat=True).distinct()
+            filtered_qs = qs
+            if regions_param:
+                filtered_qs = filtered_qs.filter(region__name__in=regions_param.split(','))
+                #  filter the district for the regions selected in the region filter
+                district_qs = filtered_qs.filter(district__isnull=False).values_list('district__name', flat=True).distinct()
+            if districts_param:
+                filtered_qs = filtered_qs.filter(district__name__in=districts_param.split(','))
+            
+            submitter_qs = filtered_qs.filter(submitter__isnull=False).distinct(
                             'submitter__email').values_list('submitter__first_name','submitter__last_name','submitter__email')
-            applicant_qs = qs.filter(applicant__isnull=False).distinct(
-                        'applicant_id').values_list('applicant_id','applicant__organisation__name',)
-
-
-        activity_qs =  qs.filter(activity__isnull=False).values_list('activity', flat=True).distinct()
+            applicant_qs = filtered_qs.filter(applicant__isnull=False).distinct(
+                        'applicant_id').values_list('applicant_id','applicant__organisation__name')
+            activity_qs = filtered_qs.filter(activity__isnull=False).values_list('activity', flat=True).distinct()
+            application_type_qs = filtered_qs.filter(application_type__isnull=False, application_type__visible=True).values_list('application_type__name', flat=True).distinct()
+        
         submitters = [dict(email=i[2], search_term='{} {} ({})'.format(i[0], i[1], i[2])) for i in submitter_qs]
-        application_type_qs =  qs.filter(application_type__isnull=False, application_type__visible=True).values_list('application_type__name', flat=True).distinct()
         applicants = [dict(id=i[0], search_term='{}'.format(i[1])) for i in applicant_qs]
         data = dict(
             regions=region_qs,
