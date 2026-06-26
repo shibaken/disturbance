@@ -2802,7 +2802,7 @@ class Proposal(DirtyFieldsMixin, RevisionedMixin):
             if previous_proposal:
                 #NOTE: this try except is explicitly designed to fail on first attempt as part of the renewal process - should be refactored to work more gracefully 
                 try:
-                    proposal=Proposal.objects.get(previous_application = previous_proposal)
+                    proposal = Proposal.objects.exclude(processing_status__in=[Proposal.PROCESSING_STATUS_DISCARDED,Proposal.PROCESSING_STATUS_DECLINED]).get(previous_application=previous_proposal)
                     if proposal.customer_status=='with_assessor':
                         if not proposal.apiary_group_application_type:
                             raise ValidationError('A renewal or amendment proposal for this approval has already been lodged and is awaiting review.')
