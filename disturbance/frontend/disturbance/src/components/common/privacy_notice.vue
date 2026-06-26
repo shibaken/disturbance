@@ -124,11 +124,3 @@ export default {
   opacity: 0;
 }
 </style>
-  overflow: hidden;
-}
-
-.slide-enter, .slide-leave-to {
-  max-height: 0;
-  opacity: 0;
-}
-</style>
