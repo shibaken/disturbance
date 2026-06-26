@@ -92,12 +92,14 @@ export default {
     this.$http.get('/template_group', {
       emulateJSON: true
     }).then(res => {
+      console.log('[PrivacyNotice] Template group:', res.body.template_group, 'Route path:', this.$route.path);
       if (res.body.template_group === 'apiary') {
         this.apiaryTemplateGroup = true;
-      } else if (res.body.template_group === 'disturbance') {
-        // DAS: only display on /account/ page
-        if (this.$route.path === '/account') {
+      } else if (res.body.template_group === 'das' || res.body.template_group === 'disturbance') {
+        // DAS: only display on /account/ page (with or without trailing slash)
+        if (this.$route.path === '/account' || this.$route.path === '/account/') {
           this.dasTemplateGroup = true;
+          console.log('[PrivacyNotice] DAS template group activated for /account/');
         }
       }
     }, err => {
