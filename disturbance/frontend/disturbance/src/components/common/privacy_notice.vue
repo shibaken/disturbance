@@ -60,6 +60,14 @@ export default {
     console.log('PrivacyNotice: Component mounted');
     console.log('PrivacyNotice: Current route path:', this.$route.path);
     
+    // Get privacy policy URL from window.env if available
+    if (window.env && window.env.privacy_policy_url) {
+      this.privacyPolicyUrl = window.env.privacy_policy_url;
+      console.log('PrivacyNotice: Privacy policy URL from env:', this.privacyPolicyUrl);
+    } else {
+      console.log('PrivacyNotice: Using default privacy policy URL');
+    }
+    
     // Get template group from API
     fetch('/template_group', {
       method: 'GET',
