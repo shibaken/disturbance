@@ -1,5 +1,5 @@
 <template>
-  <div v-if="apiaryTemplateGroup" class="privacy-notice-container">
+  <div v-if="apiaryTemplateGroup || dasTemplateGroup" class="privacy-notice-container">
     <div class="panel panel-info">
       <div class="panel-heading" @click="toggleCollapse" style="cursor: pointer;">
         <h4 class="panel-title">
@@ -10,29 +10,61 @@
       </div>
       <transition name="slide">
         <div v-show="isExpanded" class="panel-body">
-          <p>
-            The Department of Biodiversity, Conservation and Attractions (DBCA) collects this personal
-            information to assess, approve and grant an Apiary Authority that allows you to
-            legally carry out beekeeping activities in Western Australia's national parks, conservation
-            reserves and certain Crown lands for beekeeping.
-          </p>
-          <p>
-            You are required to provide this information under the
-            <em>Conservation and Land Management Act 1984</em> and
-            <em>Conservation and Land Management Regulations 2002</em>.
-          </p>
-          <p>
-            If you choose not to provide personal information, you will not be able to legally carry
-            out beekeeping activities in Western Australia's national parks, conservation reserves and
-            certain Crown lands for beekeeping.
-          </p>
-          <p>
-            For further details on how DBCA manage your personal information, you can read our
-            <a :href="privacyPolicyUrl" target="_blank">Privacy Policy</a>.
-            If you have any questions about how your personal information will be handled, or if you
-            would like to access your personal information, please email
-            <a href="mailto:privacy@dbca.wa.gov.au">privacy@dbca.wa.gov.au</a>.
-          </p>
+          <!-- DAS-specific content -->
+          <div v-if="dasTemplateGroup">
+            <p>
+              The Department of Biodiversity, Conservation and Attractions (DBCA) collects personal information, to:
+            </p>
+            <ul>
+              <li>provide you with access to the Disturbance Approval System (DAS)</li>
+              <li>assign users to the appropriate organisation</li>
+              <li>enable communication regarding proposals, assessments, and approval processes</li>
+            </ul>
+            <p>
+              We may share this information with:
+            </p>
+            <ul>
+              <li>the relevant organisation you are seeking to be linked to, for the purpose of confirming your association</li>
+              <li>the assigned assessor and approver of a proposal, to enable the proponent to be contacted and notified</li>
+            </ul>
+            <p>
+              If you choose not to provide this information, DBCA will be unable to grant you access to DAS or link you to an organisation (including establishing a new organisation within DAS).
+            </p>
+            <p>
+              For further details on how DBCA manage your personal information, you can read our
+              <a :href="privacyPolicyUrl" target="_blank">Privacy Policy</a>.
+              If you have any questions about how your personal information will be handled, or if you
+              would like to access your personal information, please email DBCA at
+              <a href="mailto:privacy@dbca.wa.gov.au">privacy@dbca.wa.gov.au</a>.
+            </p>
+          </div>
+
+          <!-- Apiary-specific content -->
+          <div v-if="apiaryTemplateGroup">
+            <p>
+              The Department of Biodiversity, Conservation and Attractions (DBCA) collects this personal
+              information to assess, approve and grant an Apiary Authority that allows you to
+              legally carry out beekeeping activities in Western Australia's national parks, conservation
+              reserves and certain Crown lands for beekeeping.
+            </p>
+            <p>
+              You are required to provide this information under the
+              <em>Conservation and Land Management Act 1984</em> and
+              <em>Conservation and Land Management Regulations 2002</em>.
+            </p>
+            <p>
+              If you choose not to provide personal information, you will not be able to legally carry
+              out beekeeping activities in Western Australia's national parks, conservation reserves and
+              certain Crown lands for beekeeping.
+            </p>
+            <p>
+              For further details on how DBCA manage your personal information, you can read our
+              <a :href="privacyPolicyUrl" target="_blank">Privacy Policy</a>.
+              If you have any questions about how your personal information will be handled, or if you
+              would like to access your personal information, please email
+              <a href="mailto:privacy@dbca.wa.gov.au">privacy@dbca.wa.gov.au</a>.
+            </p>
+          </div>
         </div>
       </transition>
     </div>
@@ -46,6 +78,7 @@ export default {
     return {
       isExpanded: true,
       apiaryTemplateGroup: false,
+      dasTemplateGroup: false,
       privacyPolicyUrl: '#'
     }
   },
@@ -61,6 +94,11 @@ export default {
     }).then(res => {
       if (res.body.template_group === 'apiary') {
         this.apiaryTemplateGroup = true;
+      } else if (res.body.template_group === 'disturbance') {
+        // DAS: only display on /account/ page
+        if (this.$route.path === '/account') {
+          this.dasTemplateGroup = true;
+        }
       }
     }, err => {
       console.error('Error fetching template group:', err);
