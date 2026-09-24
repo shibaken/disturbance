@@ -32,6 +32,7 @@ from disturbance.components.organisations.models import (
                             )
 from disturbance.components.main.serializers import CommunicationLogEntrySerializer, DASMapLayerSqsSerializer
 from disturbance.components.main.models import DASMapLayer
+from disturbance.components.main.sanitisation import NH3SanitizeSerializerMixin
 
 from disturbance.components.proposals.serializers_base import BaseProposalSerializer, ProposalReferralSerializer, \
     ProposalDeclinedDetailsSerializer, EmailUserSerializer, EmailSerializer
@@ -311,7 +312,7 @@ class ProposalSerializer(BaseProposalSerializer):
          return obj.comment_data
 
 
-class SaveProposalSerializer(BaseProposalSerializer):
+class SaveProposalSerializer(NH3SanitizeSerializerMixin, BaseProposalSerializer):
     assessor_data = serializers.JSONField(required=False)
 
     class Meta:
@@ -360,7 +361,7 @@ class SaveProposalSerializer(BaseProposalSerializer):
                 )
         read_only_fields=('documents','requirements')
 
-class SaveProposalRegionSerializer(BaseProposalSerializer):
+class SaveProposalRegionSerializer(NH3SanitizeSerializerMixin, BaseProposalSerializer):
 
     class Meta:
         model = Proposal
@@ -640,7 +641,7 @@ class ProposalLogEntrySerializer(CommunicationLogEntrySerializer):
     def get_documents(self,obj):
         return [[d.name,d._file.url] for d in obj.documents.all()]
 
-class SendReferralSerializer(serializers.Serializer):
+class SendReferralSerializer(NH3SanitizeSerializerMixin, serializers.Serializer):
     email = serializers.EmailField()
     text = serializers.CharField(allow_blank=True)
 
@@ -697,7 +698,7 @@ class DTReferralSerializer(serializers.ModelSerializer):
         return self.context.get('template_group')
 
 
-class ProposalRequirementSerializer(serializers.ModelSerializer):
+class ProposalRequirementSerializer(NH3SanitizeSerializerMixin, serializers.ModelSerializer):
     due_date = serializers.DateField(input_formats=['%d/%m/%Y'],required=False,allow_null=True)
     apiary_renewal = serializers.SerializerMethodField()
     recurrence_schedule = serializers.IntegerField(required=False, allow_null=True)
@@ -735,7 +736,7 @@ class ProposalStandardRequirementSerializer(serializers.ModelSerializer):
         fields = ('id','code','text')
 
 
-class ProposedApprovalSerializer(serializers.Serializer):
+class ProposedApprovalSerializer(NH3SanitizeSerializerMixin, serializers.Serializer):
     expiry_date = serializers.DateField(input_formats=['%d/%m/%Y', '%Y-%m-%d'], required=False)
     start_date = serializers.DateField(input_formats=['%d/%m/%Y', '%Y-%m-%d'], required=False)
     details = serializers.CharField(required=False, allow_blank=True)
@@ -754,7 +755,7 @@ class ProposedApprovalSerializer(serializers.Serializer):
 #    dra_permit = serializers.BooleanField(required=False,default=False)
 
     def validate(self, attrs):
-        return attrs
+        return super().validate(attrs)
 
 
 class ProposedApprovalSiteTransferSerializer(serializers.Serializer):
@@ -776,7 +777,7 @@ class ProposedApprovalSiteTransferSerializer(serializers.Serializer):
 
 
 
-class PropedDeclineSerializer(serializers.Serializer):
+class PropedDeclineSerializer(NH3SanitizeSerializerMixin, serializers.Serializer):
     reason = serializers.CharField()
     cc_email = serializers.CharField(required=False, allow_null=True)
 
@@ -786,7 +787,7 @@ class AmendmentRequestDocumentSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', '_file')
         #fields = '__all__'
 
-class AmendmentRequestSerializer(serializers.ModelSerializer):
+class AmendmentRequestSerializer(NH3SanitizeSerializerMixin, serializers.ModelSerializer):
     #reason = serializers.SerializerMethodField()
     amendment_request_documents = AmendmentRequestDocumentSerializer(many=True, read_only=True)
 
