@@ -48,6 +48,7 @@ from disturbance.components.organisations.models import Organisation
 from disturbance.components.main.models import CommunicationsLogEntry, UserAction, Document, Region, District, \
     ApplicationType, DASMapLayer, TaskMonitor, RequestTypeEnum
 from disturbance.components.main.utils import get_department_user
+from disturbance.components.main.sanitisation import SanitisationModelMixin
 from disturbance.components.proposals.email import (
         send_referral_email_notification,
         send_proposal_decline_email_notification,
@@ -338,7 +339,7 @@ def fee_invoice_references_default():
     return []
 
 
-class Proposal(DirtyFieldsMixin, RevisionedMixin):
+class Proposal(SanitisationModelMixin, DirtyFieldsMixin, RevisionedMixin):
     CUSTOMER_STATUS_TEMP = 'temp'
     CUSTOMER_STATUS_DRAFT = 'draft'
     CUSTOMER_STATUS_WITH_ASSESSOR = 'with_assessor'
@@ -2461,7 +2462,7 @@ class AmendmentRequestDocument(Document):
         if self.can_delete:
             return super(AmendmentRequestDocument, self).delete()
 
-class ProposalRequest(models.Model):
+class ProposalRequest(SanitisationModelMixin, models.Model):
     proposal = models.ForeignKey(Proposal, on_delete=models.CASCADE)
     subject = models.CharField(max_length=200, blank=True)
     text = models.TextField(blank=True)
@@ -2479,7 +2480,7 @@ class ComplianceRequest(ProposalRequest):
         app_label = 'disturbance'
 
 
-class AmendmentReason(models.Model):
+class AmendmentReason(SanitisationModelMixin, models.Model):
     reason = models.CharField('Reason', max_length=125)
 
     class Meta:
@@ -2578,7 +2579,7 @@ class Assessment(ProposalRequest):
     class Meta:
         app_label = 'disturbance'
 
-class ProposalDeclinedDetails(models.Model):
+class ProposalDeclinedDetails(SanitisationModelMixin, models.Model):
     proposal = models.OneToOneField(Proposal, on_delete=models.CASCADE)
     officer = models.ForeignKey(EmailUser, null=False, on_delete=models.DO_NOTHING)
     reason = models.TextField(blank=True)
@@ -2605,7 +2606,7 @@ class ProposalStandardRequirement(RevisionedMixin):
         app_label = 'disturbance'
 
 
-class ProposalRequirement(OrderedModel):
+class ProposalRequirement(SanitisationModelMixin, OrderedModel):
     #from disturbance.components.approvals.models import Approval
     RECURRENCE_PATTERNS = [(1, 'Weekly'), (2, 'Monthly'), (3, 'Yearly')]
     standard_requirement = models.ForeignKey(ProposalStandardRequirement,null=True,blank=True, on_delete=models.SET_NULL)
@@ -2712,7 +2713,7 @@ class ProposalUserAction(UserAction):
 
 
 
-class Referral(models.Model):
+class Referral(SanitisationModelMixin, models.Model):
     SENT_CHOICES = (
         (1,'Sent From Assessor'),
         (2,'Sent From Referral')
@@ -3260,7 +3261,9 @@ def get_search_geojson(proposal_lodgement_numbers,request):
 
 # from django_ckeditor_5.fields import CKEditor5Field
 from tinymce.models import HTMLField
-class HelpPage(models.Model):
+class HelpPage(SanitisationModelMixin, models.Model):
+    sanitise_exclude_fields = {"content"}
+
     HELP_TEXT_EXTERNAL = 1
     HELP_TEXT_INTERNAL = 2
     HELP_TYPE_CHOICES = (
@@ -3325,7 +3328,9 @@ class QuestionOption(models.Model):
 
 # from django_ckeditor_5.fields import CKEditor5Field
 from tinymce.models import HTMLField
-class MasterlistQuestion(models.Model):
+class MasterlistQuestion(SanitisationModelMixin, models.Model):
+    sanitise_exclude_fields = {"help_text", "help_text_assessor"}
+
     ANSWER_TYPE_CHECKBOX = 'checkbox'
     ANSWER_TYPE_RADIO = 'radiobuttons'
     ANSWER_TYPE_SELECT = 'select'
