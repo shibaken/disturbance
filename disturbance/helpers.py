@@ -118,7 +118,20 @@ def is_das_referrer(request):
     )
 
 def is_internal(request):
-    return is_departmentUser(request)
+    # return is_departmentUser(request)
+    return (
+        request
+        and request.user
+        and (
+            request.user.is_superuser
+            or is_departmentUser(request)
+            or is_disturbance_admin(request)
+            or is_das_approver(request)
+            or is_das_assessor(request)
+            or is_das_referrer(request)
+            or is_org_request_assessor(request)
+        )
+    )
 
 def get_all_officers():
     return EmailUser.objects.filter(groups__name='Disturbance Admin')
