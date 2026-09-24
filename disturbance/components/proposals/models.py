@@ -3620,7 +3620,7 @@ def limit_sectionquestion_choices_sql():
     except:
         return {}
 
-class SectionQuestion(models.Model):
+class SectionQuestion(SanitisationModelMixin, models.Model):
     TAG_CHOICES=(('isCopiedToPermit', 'isCopiedToPermit'),
                  ('isRequired', 'isRequired'),
                  ('canBeEditedByAssessor', 'canBeEditedByAssessor'),
@@ -3772,7 +3772,7 @@ class SectionQuestion(models.Model):
 #    def get_queryset(self):
 #        return super().get_queryset().exclude(expiry__lt=datetime.datetime.now().date())
 
-class SpatialQueryQuestion(RevisionedMixin):
+class SpatialQueryQuestion(SanitisationModelMixin, RevisionedMixin):
                         
     question = models.ForeignKey(MasterlistQuestion, related_name='questions', on_delete=models.PROTECT )
     answer_mlq = models.ForeignKey(QuestionOption, related_name='question_options', on_delete=models.CASCADE , blank=True, null=True)
@@ -3817,7 +3817,7 @@ class CurrentSpatialQueryLayerManager(models.Manager):
         return super().get_queryset().exclude(expiry__lt=datetime.datetime.now().date())
 
 
-class SpatialQueryLayer(RevisionedMixin):
+class SpatialQueryLayer(SanitisationModelMixin, RevisionedMixin):
     OVERLAPPING = 'Overlapping'
     OUTSIDE     = 'Outside'
     INSIDE      = 'Inside'
