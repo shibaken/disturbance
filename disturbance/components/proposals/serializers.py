@@ -812,7 +812,7 @@ class AmendmentRequestDisplaySerializer(serializers.ModelSerializer):
         return obj.reason.reason if obj.reason else None
 
 
-class SearchKeywordSerializer(serializers.Serializer):
+class SearchKeywordSerializer(NH3SanitizeSerializerMixin, serializers.Serializer):
     number = serializers.CharField()
     id = serializers.IntegerField()
     type = serializers.CharField()
@@ -831,7 +831,7 @@ class SearchReferenceSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     type = serializers.CharField()
 
-class SearchGeoJsonSerializer(serializers.Serializer):
+class SearchGeoJsonSerializer(NH3SanitizeSerializerMixin, serializers.Serializer):
     search_geojson = serializers.JSONField(required=False)
 
 class QuestionOptionSerializer(serializers.ModelSerializer):
@@ -1200,7 +1200,7 @@ class DTSchemaMasterlistSerializer(SchemaMasterlistSerializer):
 
 
 
-class SchemaQuestionSerializer(serializers.ModelSerializer):
+class SchemaQuestionSerializer(NH3SanitizeSerializerMixin, serializers.ModelSerializer):
     '''
     Serializer for Schema builder using Section Questions.
     '''
