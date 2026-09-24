@@ -14,6 +14,7 @@ from django.db.models import JSONField
 from django.utils import timezone
 from django.core.cache import cache
 from django.utils.html import strip_tags
+from disturbance.components.main.sanitisation import SanitisationModelMixin
 
 class MapLayer(models.Model):
     display_name = models.CharField(max_length=100, blank=True, null=True)
@@ -269,7 +270,7 @@ class Document(models.Model):
         return self.name or self.filename
 
 
-class SystemMaintenance(models.Model):
+class SystemMaintenance(SanitisationModelMixin, models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField()
     start_date = models.DateTimeField()
@@ -294,7 +295,9 @@ class SystemMaintenance(models.Model):
 # from django_ckeditor_5.fields import CKEditor5Field
 from tinymce.models import HTMLField
 
-class GlobalSettings(models.Model):
+class GlobalSettings(SanitisationModelMixin, models.Model):
+    sanitise_exclude_fields = {"help_text"}
+
     KEY_ASSESSMENT_REMINDER_DAYS = 'assessment_reminder_days'
     DAS_SHAREPOINT_PAGE = 'das_sharepoint_page'
     PROPOSAL_ASSESS_HELP_PAGE ='proposal_assess_help_page'
@@ -433,7 +436,7 @@ class TaskMonitor(models.Model):
     def __str__(self):
         return f'Task {self.task_id}, Proposal: {self.proposal}'
 
-class JobQueue(models.Model):
+class JobQueue(SanitisationModelMixin, models.Model):
     STATUS = (
        (0, 'Pending'),
        (1, 'Running'),
@@ -456,7 +459,8 @@ class JobQueue(models.Model):
         app_label = 'disturbance' 
 
 from tinymce.models import HTMLField
-class Notice(models.Model):
+class Notice(SanitisationModelMixin, models.Model):
+    sanitise_exclude_fields = {"message"}
 
     NOTICE_TYPE_CHOICES = (
         (0, 'Red Warning'),
