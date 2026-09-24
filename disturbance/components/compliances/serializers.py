@@ -3,6 +3,7 @@ from ledger.accounts.models import EmailUser,Address
 from disturbance.components.compliances.models import (
     Compliance, ComplianceUserAction, ComplianceLogEntry, ComplianceAmendmentRequest, ComplianceAmendmentReason
 )
+from disturbance.components.main.sanitisation import NH3SanitizeSerializerMixin
 from rest_framework import serializers
 
 
@@ -167,7 +168,7 @@ class ComplianceSerializer(serializers.ModelSerializer):
         }
 
 
-class SaveComplianceSerializer(serializers.ModelSerializer):
+class SaveComplianceSerializer(NH3SanitizeSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = Compliance
         fields = (
@@ -191,7 +192,7 @@ class ComplianceCommsSerializer(serializers.ModelSerializer):
     def get_documents(self,obj):
         return [[d.name,d._file.url] for d in obj.documents.all()]
 
-class ComplianceAmendmentRequestSerializer(serializers.ModelSerializer):
+class ComplianceAmendmentRequestSerializer(NH3SanitizeSerializerMixin, serializers.ModelSerializer):
     #reason = serializers.SerializerMethodField()
 
     class Meta:
