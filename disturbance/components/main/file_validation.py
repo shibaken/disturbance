@@ -25,6 +25,7 @@ STANDARD_ALLOWED_EXTENSIONS = DEFAULT_STANDARD_ALLOWED_EXTENSIONS
 
 DEFAULT_GIS_ARCHIVE_ALLOWED_EXTENSIONS = frozenset({
     ".shp", ".shx", ".dbf", ".prj", ".sbn", ".sbx", ".cpg", ".qix", ".xml",
+    ".geojson", ".json", ".gpkg",
 })
 
 # Backward-compatible alias; existing callers (e.g. ProposalMapDocument's
