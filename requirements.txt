@@ -46,6 +46,7 @@ dj-database-url==2.3.0
 python-docx==1.1.2
 docxtpl==0.10.0
 phonenumbers==8.13.55
+nh3==0.2.18
 django-treebeard==4.7.1
 git+https://github.com/jazzband/django-smart-selects.git@1.7.2
 django-multiselectfield==0.1.13
