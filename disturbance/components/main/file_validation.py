@@ -23,9 +23,13 @@ DEFAULT_STANDARD_ALLOWED_EXTENSIONS = frozenset({
 # explicit archive-union allowed_extensions) keep referring to the static default.
 STANDARD_ALLOWED_EXTENSIONS = DEFAULT_STANDARD_ALLOWED_EXTENSIONS
 
-GIS_ARCHIVE_ALLOWED_EXTENSIONS = frozenset({
+DEFAULT_GIS_ARCHIVE_ALLOWED_EXTENSIONS = frozenset({
     ".shp", ".shx", ".dbf", ".prj", ".sbn", ".sbx", ".cpg", ".qix", ".xml",
 })
+
+# Backward-compatible alias; existing callers (e.g. ProposalMapDocument's
+# explicit archive-union allowed_extensions) keep referring to the static default.
+GIS_ARCHIVE_ALLOWED_EXTENSIONS = DEFAULT_GIS_ARCHIVE_ALLOWED_EXTENSIONS
 
 COMPRESSED_EXTENSIONS = frozenset({".zip"})
 
@@ -35,8 +39,9 @@ DEFAULT_MAX_UPLOAD_SIZE = getattr(settings, "FILE_UPLOAD_MAX_MEMORY_SIZE", 15 * 
 # whitelist spec but a direct consequence of parsing attacker-controlled zips.
 MAX_ARCHIVE_UNCOMPRESSED_SIZE = 100 * 1024 * 1024  # 100 MB
 
-# Key used to look up the dynamic whitelist in GlobalSettings.
+# Keys used to look up the dynamic whitelists in GlobalSettings.
 GLOBAL_SETTINGS_ALLOWED_EXTENSIONS_KEY = "allowed_file_extensions"
+GLOBAL_SETTINGS_ALLOWED_GIS_ARCHIVE_EXTENSIONS_KEY = "allowed_gis_archive_extensions"
 
 
 def _parse_extensions(raw):
@@ -90,6 +95,44 @@ def get_standard_allowed_extensions():
     return DEFAULT_STANDARD_ALLOWED_EXTENSIONS
 
 
+def get_gis_archive_allowed_extensions():
+    """Resolve the GIS archive inner-file extension whitelist dynamically, without requiring a code change.
+
+    Resolution order:
+      1. `GlobalSettings` DB row keyed on `allowed_gis_archive_extensions` (admin-editable).
+      2. `settings.ALLOWED_GIS_ARCHIVE_EXTENSIONS` (string or iterable of extensions).
+      3. `DEFAULT_GIS_ARCHIVE_ALLOWED_EXTENSIONS` (hardcoded fallback).
+
+    Any failure (missing table during migrations/tests, DB not ready, bad
+    config value, etc.) is swallowed and resolution falls through to the
+    next source, so this function can never itself break a save().
+    """
+    try:
+        from disturbance.components.main.models import GlobalSettings  # local import: avoids circular import with main.models
+
+        row = GlobalSettings.objects.filter(key=GLOBAL_SETTINGS_ALLOWED_GIS_ARCHIVE_EXTENSIONS_KEY).first()
+        if row is not None:
+            parsed = _parse_extensions(row.value)
+            if parsed:
+                return parsed
+    except Exception:
+        logger.exception("Unable to resolve allowed GIS archive extensions from GlobalSettings; falling back.")
+
+    try:
+        configured = getattr(settings, "ALLOWED_GIS_ARCHIVE_EXTENSIONS", None)
+        if configured:
+            if isinstance(configured, str):
+                parsed = _parse_extensions(configured)
+            else:
+                parsed = frozenset("." + str(item).strip().lstrip(".").lower() for item in configured)
+            if parsed:
+                return parsed
+    except Exception:
+        logger.exception("Unable to resolve allowed GIS archive extensions from Django settings; falling back.")
+
+    return DEFAULT_GIS_ARCHIVE_ALLOWED_EXTENSIONS
+
+
 def validate_uploaded_file(
     file_obj,
     allowed_extensions=None,
@@ -140,6 +183,8 @@ def _validate_archive(file_obj, name):
     except (AttributeError, ValueError):
         pass
 
+    gis_archive_allowed_extensions = get_gis_archive_allowed_extensions()
+
     try:
         with zipfile.ZipFile(file_obj) as archive:
             total_uncompressed = 0
@@ -159,7 +204,7 @@ def _validate_archive(file_obj, name):
                         f"Archive '{name}' contains a nested folder ('{member_path}'); "
                         f"only a flat (depth 1) file listing is allowed."
                     )
-                if member_ext not in GIS_ARCHIVE_ALLOWED_EXTENSIONS:
+                if member_ext not in gis_archive_allowed_extensions:
                     raise ValidationError(
                         f"Archive '{name}' contains a disallowed file '{member_path}' "
                         f"(extension '{member_ext}')."
