@@ -11,6 +11,7 @@ from django.contrib.postgres.fields.jsonb import JSONField
 from ledger.accounts.models import Organisation as ledger_organisation
 from ledger.accounts.models import EmailUser, RevisionedMixin, Document
 from disturbance.components.main.models import UserAction,CommunicationsLogEntry
+from disturbance.components.main.sanitisation import SanitisationModelMixin
 from disturbance.components.organisations.utils import random_generator
 from disturbance.components.organisations.emails import (
                         send_organisation_request_accept_email_notification,
@@ -33,7 +34,7 @@ from django.core.files.storage import FileSystemStorage
 #private_storage = FileSystemStorage(location=settings.BASE_DIR+"/private-media/", base_url='/private-media/')
 private_storage = FileSystemStorage(location="private-media/", base_url='/private-media/')
 
-class Organisation(models.Model):
+class Organisation(SanitisationModelMixin, models.Model):
     organisation = models.ForeignKey(ledger_organisation, on_delete=models.DO_NOTHING)
     # TODO: business logic related to delegate changes.
     delegates = models.ManyToManyField(EmailUser, blank=True, through='UserDelegation', related_name='disturbance_organisations')
@@ -490,7 +491,7 @@ class Organisation(models.Model):
             return ','.join(['{} {}'.format(user.first_name, user.last_name) for user in qs[:5]])
         return self.first_five
 
-class OrganisationContact(models.Model):
+class OrganisationContact(SanitisationModelMixin, models.Model):
     USER_STATUS_CHOICES = (('draft', 'Draft'),
         ('pending', 'Pending'),
         ('active', 'Active'),
@@ -616,7 +617,7 @@ class OrganisationLogEntry(CommunicationsLogEntry):
         app_label = 'disturbance'
 
 
-class OrganisationRequest(models.Model):
+class OrganisationRequest(SanitisationModelMixin, models.Model):
     STATUS_CHOICES = (
         ('with_assessor','With Assessor'),
         ('approved','Approved'),
@@ -778,7 +779,7 @@ class OrganisationRequestUserAction(UserAction):
         app_label = 'disturbance'
 
 
-class OrganisationRequestDeclinedDetails(models.Model):
+class OrganisationRequestDeclinedDetails(SanitisationModelMixin, models.Model):
     request = models.ForeignKey(OrganisationRequest, on_delete=models.CASCADE)
     officer = models.ForeignKey(EmailUser, null=False, on_delete=models.DO_NOTHING)
     reason = models.TextField(blank=True)
