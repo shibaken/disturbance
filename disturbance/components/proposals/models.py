@@ -49,6 +49,7 @@ from disturbance.components.main.models import CommunicationsLogEntry, UserActio
     ApplicationType, DASMapLayer, TaskMonitor, RequestTypeEnum
 from disturbance.components.main.utils import get_department_user
 from disturbance.components.main.sanitisation import SanitisationModelMixin
+from disturbance.components.main.file_validation import STANDARD_ALLOWED_EXTENSIONS, GIS_ARCHIVE_ALLOWED_EXTENSIONS
 from disturbance.components.proposals.email import (
         send_referral_email_notification,
         send_proposal_decline_email_notification,
@@ -310,6 +311,8 @@ class ProposalMapDocument(Document):
     can_delete = models.BooleanField(default=True) # after initial submit prevent document from being deleted
     can_hide= models.BooleanField(default=False) # after initial submit, document cannot be deleted but can be hidden
     hidden=models.BooleanField(default=False) # after initial submit prevent document from being deleted
+    allow_compressed = True  # accepts shapefile-bundle .zip archives in addition to individual .shp/.shx/.dbf/.prj uploads
+    allowed_extensions = STANDARD_ALLOWED_EXTENSIONS | GIS_ARCHIVE_ALLOWED_EXTENSIONS
 
     def delete(self):
         if self.can_delete:
