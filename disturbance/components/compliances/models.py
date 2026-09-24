@@ -16,6 +16,7 @@ from taggit.models import TaggedItemBase
 from ledger.accounts.models import Organisation as ledger_organisation
 from ledger.accounts.models import EmailUser, RevisionedMixin
 from disturbance import exceptions
+from disturbance.components.main.sanitisation import SanitisationModelMixin
 from disturbance.components.organisations.models import Organisation
 from disturbance.components.main.models import CommunicationsLogEntry, Region, UserAction, Document
 from disturbance.components.proposals.models import ProposalRequirement, AmendmentReason
@@ -40,7 +41,7 @@ logger = logging.getLogger(__name__)
 
 
 #class Compliance(models.Model):
-class Compliance(RevisionedMixin):
+class Compliance(SanitisationModelMixin, RevisionedMixin):
 
     PROCESSING_STATUS_CHOICES = (('due', 'Due'),
                                  ('future', 'Future'),
@@ -308,7 +309,7 @@ class ComplianceAmendmentReason(models.Model):
         return self.reason
 
 
-class ComplianceAmendmentRequest(CompRequest):
+class ComplianceAmendmentRequest(SanitisationModelMixin, CompRequest):
     STATUS_CHOICES = (('requested', 'Requested'), ('amended', 'Amended'))
     # try:
     #     # model requires some choices if AmendmentReason does not yet exist or is empty
