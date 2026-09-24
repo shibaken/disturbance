@@ -12,6 +12,7 @@ from ledger.accounts.models import Organisation as ledger_organisation
 from ledger.accounts.models import EmailUser, RevisionedMixin, Document
 from disturbance.components.main.models import UserAction,CommunicationsLogEntry
 from disturbance.components.main.sanitisation import SanitisationModelMixin
+from disturbance.components.main.file_validation import SanitiseFileMixin
 from disturbance.components.organisations.utils import random_generator
 from disturbance.components.organisations.emails import (
                         send_organisation_request_accept_email_notification,
@@ -596,7 +597,7 @@ def update_organisation_comms_log_filename(instance, filename):
     return 'organisations/{}/communications/{}/{}'.format(instance.log_entry.organisation.id,instance.id,filename)
 
 
-class OrganisationLogDocument(Document):
+class OrganisationLogDocument(SanitiseFileMixin, Document):
     log_entry = models.ForeignKey('OrganisationLogEntry',related_name='documents', on_delete=models.CASCADE)
     _file = models.FileField(upload_to=update_organisation_comms_log_filename, storage=private_storage)
 
@@ -617,7 +618,8 @@ class OrganisationLogEntry(CommunicationsLogEntry):
         app_label = 'disturbance'
 
 
-class OrganisationRequest(SanitisationModelMixin, models.Model):
+class OrganisationRequest(SanitisationModelMixin, SanitiseFileMixin, models.Model):
+    sanitise_file_field = "identification"
     STATUS_CHOICES = (
         ('with_assessor','With Assessor'),
         ('approved','Approved'),
@@ -791,7 +793,7 @@ def update_organisation_request_comms_log_filename(instance, filename):
     return 'organisation_requests/{}/communications/{}/{}'.format(instance.log_entry.request.id,instance.id,filename)
 
 
-class OrganisationRequestLogDocument(Document):
+class OrganisationRequestLogDocument(SanitiseFileMixin, Document):
     log_entry = models.ForeignKey('OrganisationRequestLogEntry',related_name='documents', on_delete=models.CASCADE)
     _file = models.FileField(upload_to=update_organisation_request_comms_log_filename, storage=private_storage)
 

@@ -15,6 +15,7 @@ from django.utils import timezone
 from django.core.cache import cache
 from django.utils.html import strip_tags
 from disturbance.components.main.sanitisation import SanitisationModelMixin
+from disturbance.components.main.file_validation import SanitiseFileMixin
 
 class MapLayer(models.Model):
     display_name = models.CharField(max_length=100, blank=True, null=True)
@@ -246,7 +247,7 @@ class CommunicationsLogEntry(models.Model):
         app_label = 'disturbance'
 
 
-class Document(models.Model):
+class Document(SanitiseFileMixin, models.Model):
     name = models.CharField(max_length=255, blank=True,
                             verbose_name='name', help_text='')
     description = models.TextField(blank=True,
