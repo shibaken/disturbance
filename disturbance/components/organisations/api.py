@@ -1113,9 +1113,16 @@ class OrganisationRequestsViewSet(viewsets.ReadOnlyModelViewSet, mixins.Retrieve
             raise
         except ValidationError as e:
             print(traceback.print_exc())
-            # ValidationError raised with a message list (e.g. file validation) has no error_dict
-            detail = e.message_dict if hasattr(e, 'message_dict') else (e.messages if hasattr(e, 'messages') else str(e))
-            raise serializers.ValidationError(detail)
+            # A ValidationError raised from a message list (e.g. file validation) has no error_dict
+            if hasattr(e, 'error_dict'):
+                error_repr = repr(e.error_dict)
+            elif hasattr(e, 'message_dict'):
+                error_repr = repr(e.message_dict)
+            elif hasattr(e, 'messages'):
+                error_repr = repr(e.messages)
+            else:
+                error_repr = str(e)
+            raise serializers.ValidationError(error_repr)
         except Exception as e:
             print(traceback.print_exc())
             raise serializers.ValidationError(str(e))
