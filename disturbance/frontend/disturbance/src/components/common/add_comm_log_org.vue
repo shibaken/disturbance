@@ -105,7 +105,7 @@
 <script>
 import modal from '@vue-utils/bootstrap-modal.vue'
 import alert from '@vue-utils/alert.vue'
-// import {helpers} from "@/utils/hooks.js"
+import { helpers } from "@/utils/hooks.js"
 export default {
     name:'Add-Comms-Org',
     components:{
@@ -220,37 +220,17 @@ export default {
                 body: comms,
             }).then(async (response)=>{
                 if (!response.ok) {
-                    // Parse the server response body for a detailed message instead of a generic status code.
-                    let errorText = '';
-                    try {
-                        const errorJson = await response.json();
-                        if (Array.isArray(errorJson)) {
-                            errorText = errorJson.map(item => {
-                                if (typeof item === 'string' && (item.startsWith('[') || item.startsWith('{'))) {
-                                    try { return JSON.parse(item); } catch (e) { return item; }
-                                }
-                                return item;
-                            }).flat().join(' ');
-                        } else if (typeof errorJson === 'object' && errorJson !== null) {
-                            errorText = Object.values(errorJson).flat().join(' ');
-                        } else {
-                            errorText = String(errorJson);
-                        }
-                    } catch (e) {
-                        errorText = await response.text();
-                    }
-                    throw new Error(errorText || `HTTP error! Status: ${response.status}`);
+                    const errorText = await helpers.parseError(response);
+                    throw new Error(errorText);
                 }
                 vm.addingComms = false;
                 vm.$emit('refreshActionFromResponse',this.action);
                 vm.close();
                 //vm.$emit('refreshFromResponse',response);
-            }).catch((error) => {
+            }).catch((err) => {
                 vm.errors = true;
                 vm.addingComms = false;
-                //TODO the apiVueResourceError need to be updated
-                // vm.errorString = helpers.apiVueResourceError(error);
-                vm.errorString = error;
+                vm.errorString = err.message;
             });
         },
         addFormValidations: function() {
