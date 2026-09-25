@@ -317,6 +317,7 @@ class GlobalSettings(SanitisationModelMixin, models.Model):
     ALLOWED_FILE_EXTENSIONS='allowed_file_extensions'
     ALLOWED_GIS_ARCHIVE_EXTENSIONS='allowed_gis_archive_extensions'
     MAX_FILE_UPLOAD_SIZE_MB = 'max_file_upload_size_mb'
+    MAX_FILE_UPLOAD_SIZE_MB_INTERNAL = 'max_file_upload_size_mb_internal'
 
     keys = (
         (KEY_ASSESSMENT_REMINDER_DAYS, 'Assessment reminder days'),
@@ -337,6 +338,7 @@ class GlobalSettings(SanitisationModelMixin, models.Model):
         (ALLOWED_FILE_EXTENSIONS, 'Allowed File Extensions (Standard)'),
         (ALLOWED_GIS_ARCHIVE_EXTENSIONS, 'Allowed GIS Archive Extensions'),
         (MAX_FILE_UPLOAD_SIZE_MB, 'Maximum File Upload Size (MB)'),
+        (MAX_FILE_UPLOAD_SIZE_MB_INTERNAL, 'Maximum File Upload Size for Internal Users (MB)'),
         
     )
     default_values = (
