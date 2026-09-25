@@ -1,6 +1,7 @@
 <template lang="html">
     <div class="ffu-wrapper">
         <label :id="id" :num_files="num_documents()" style="display: none;">{{label}}</label>
+        <alert v-if="showError" type="danger"><strong>{{errorString}}</strong></alert>
         <!--template v-if="help_text">
             <HelpText :help_text="help_text" />
         </template-->
@@ -46,6 +47,7 @@
 </template>
 
 <script>
+import alert from '@vue-utils/alert.vue'
 import {
   api_endpoints,
   helpers
@@ -53,6 +55,9 @@ import {
 from '@/utils/hooks';
 export default {
     name: "FileField",
+    components: {
+        alert
+    },
     props:{
         name:String,
         label:String,
@@ -95,6 +100,8 @@ export default {
             help_text_url:'',
             commsLogId: null,
             temporary_document_collection_id: null,
+            errors: false,
+            errorString: '',
             //document_action_url: this.documentActionUrl,
         }
     },
@@ -120,6 +127,9 @@ export default {
                 url = this.documentActionUrl
             }
             return url;
+        },
+        showError: function() {
+            return this.errors;
         },
     },
     watch: {
@@ -172,6 +182,7 @@ export default {
 
         get_documents: async function() {
             this.show_spinner = true;
+            this.errors = false;
 
             if (this.document_action_url) {
                 var formData = new FormData();
@@ -189,15 +200,16 @@ export default {
                     });
 
                     if (!response.ok) {
-                        throw new Error(`HTTP error! Status: ${response.status}`);
+                        const errorText = await helpers.parseError(response);
+                        throw new Error(errorText);
                     }
 
                     const data = await response.json();
                     this.documents = data.filedata;
                     this.commsLogId = data.comms_instance_id;
                 } catch (error) {
-                    console.error('Fetch error:', error);
-                    // Optionally handle error state here
+                    this.errors = true;
+                    this.errorString = error.message || 'An unexpected error occurred.';
                 }
 
             }
@@ -207,6 +219,7 @@ export default {
 
         delete_document: async function(file) {
             this.show_spinner = true;
+            this.errors = false;
 
             var formData = new FormData();
             formData.append('action', 'delete');
@@ -225,15 +238,16 @@ export default {
                     });
 
                     if (!response.ok) {
-                        throw new Error(`HTTP error! Status: ${response.status}`);
+                        const errorText = await helpers.parseError(response);
+                        throw new Error(errorText);
                     }
 
                     const data = await response.json();
                     this.documents = data.filedata;
                     this.commsLogId = data.comms_instance_id;
                 } catch (error) {
-                    console.error('Fetch error:', error);
-                    // Optionally handle error state here
+                    this.errors = true;
+                    this.errorString = error.message || 'An unexpected error occurred.';
                 }
             }
             //vm.documents = res.body;
@@ -242,6 +256,7 @@ export default {
         },
         cancel: async function() {
             this.show_spinner = true;
+            this.errors = false;
 
             let formData = new FormData();
             formData.append('action', 'cancel');
@@ -259,11 +274,13 @@ export default {
                     });
 
                     if (!response.ok) {
-                        throw new Error(`HTTP error! Status: ${response.status}`);
+                        const errorText = await helpers.parseError(response);
+                        throw new Error(errorText);
                     }
 
                 } catch (error) {
-                    console.error('Fetch error:', error);
+                    this.errors = true;
+                    this.errorString = error.message || 'An unexpected error occurred.';
                 }
             }
             this.show_spinner = false;
@@ -284,6 +301,7 @@ export default {
         },
 
         handleChangeWrapper: async function(e) {
+            this.errors = false;
             if (this.documentActionUrl === 'temporary_document' && !this.temporary_document_collection_id) {
                 // If temporary_document, create TemporaryDocumentCollection object and allow document_action_url to update
                 try {
@@ -293,7 +311,8 @@ export default {
                     });
 
                     if (!response.ok) {
-                        throw new Error(`HTTP error! Status: ${response.status}`);
+                        const errorText = await helpers.parseError(response);
+                        throw new Error(errorText);
                     }
 
                     const data = await response.json();
@@ -308,8 +327,8 @@ export default {
                         this.handleChange(e);
                     });
                 } catch (error) {
-                    console.error('Fetch error:', error);
-                    // Optionally handle error state here
+                    this.errors = true;
+                    this.errorString = error.message || 'An unexpected error occurred.';
                 }
             } else {
                 this.handleChange(e);
@@ -318,6 +337,7 @@ export default {
 
         save_document: async function(e) {
             this.show_spinner = true;
+            this.errors = false;
 
             if (this.document_action_url) {
                 var formData = new FormData();
@@ -340,7 +360,8 @@ export default {
                     });
 
                     if (!response.ok) {
-                        throw new Error(`HTTP error! Status: ${response.status}`);
+                        const errorText = await helpers.parseError(response);
+                        throw new Error(errorText);
                     }
 
                     const data = await response.json();
@@ -357,7 +378,8 @@ export default {
                     this.commsLogId = data.comms_instance_id;
 
                 } catch (error) {
-                    console.error('Fetch error:', error);
+                    this.errors = true;
+                    this.errorString = error.message || 'An unexpected error occurred.';
                 }
                 this.show_spinner = false;
             } else {
