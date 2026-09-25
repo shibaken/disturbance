@@ -220,7 +220,26 @@ export default {
                 body: comms,
             }).then(async (response)=>{
                 if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
+                    // Parse the server response body for a detailed message instead of a generic status code.
+                    let errorText = '';
+                    try {
+                        const errorJson = await response.json();
+                        if (Array.isArray(errorJson)) {
+                            errorText = errorJson.map(item => {
+                                if (typeof item === 'string' && (item.startsWith('[') || item.startsWith('{'))) {
+                                    try { return JSON.parse(item); } catch (e) { return item; }
+                                }
+                                return item;
+                            }).flat().join(' ');
+                        } else if (typeof errorJson === 'object' && errorJson !== null) {
+                            errorText = Object.values(errorJson).flat().join(' ');
+                        } else {
+                            errorText = String(errorJson);
+                        }
+                    } catch (e) {
+                        errorText = await response.text();
+                    }
+                    throw new Error(errorText || `HTTP error! Status: ${response.status}`);
                 }
                 vm.addingComms = false;
                 vm.$emit('refreshActionFromResponse',this.action);
