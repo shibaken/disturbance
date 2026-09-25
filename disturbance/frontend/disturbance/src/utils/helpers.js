@@ -299,7 +299,7 @@ export default{
                 if (Array.isArray(errorJson)) {
                     return errorJson.map(item => {
                         if (typeof item === 'string' && (item.startsWith('[') || item.startsWith('{'))) {
-                            try { return JSON.parse(item); } catch (e) { return item; }
+                            try { return JSON.parse(item); } catch { return item; }
                         }
                         return item;
                     }).flat().join(' ');
@@ -309,12 +309,12 @@ export default{
                 }
                 return String(errorJson);
             }
-        } catch (e) {
+        } catch {
             try {
                 if (typeof response.text === 'function') {
                     return await response.text();
                 }
-            } catch (e2) {
+            } catch {
                 return response.statusText || 'An unexpected error occurred.';
             }
         }
