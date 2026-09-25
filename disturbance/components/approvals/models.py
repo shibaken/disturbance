@@ -491,6 +491,7 @@ class ApprovalLogEntry(CommunicationsLogEntry):
         super(ApprovalLogEntry, self).save(**kwargs)
 
 class ApprovalLogDocument(Document):
+    is_internal = True
     log_entry = models.ForeignKey('ApprovalLogEntry',related_name='documents', null=True, on_delete=models.CASCADE)
     #approval = models.ForeignKey(Approval, related_name='comms_logs1')
     _file = models.FileField(upload_to=update_approval_comms_log_filename, null=True, storage=private_storage)

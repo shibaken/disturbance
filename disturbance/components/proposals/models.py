@@ -2436,6 +2436,7 @@ class Proposal(SanitisationModelMixin, DirtyFieldsMixin, RevisionedMixin):
 
 
 class ProposalLogDocument(Document):
+    is_internal = True
     log_entry = models.ForeignKey('ProposalLogEntry',related_name='documents', on_delete=models.CASCADE)
     _file = models.FileField(upload_to=update_proposal_comms_log_filename, storage=private_storage)
 
