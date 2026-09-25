@@ -43,6 +43,7 @@ MAX_ARCHIVE_UNCOMPRESSED_SIZE = 100 * 1024 * 1024  # 100 MB
 # Keys used to look up the dynamic whitelists in GlobalSettings.
 GLOBAL_SETTINGS_ALLOWED_EXTENSIONS_KEY = "allowed_file_extensions"
 GLOBAL_SETTINGS_ALLOWED_GIS_ARCHIVE_EXTENSIONS_KEY = "allowed_gis_archive_extensions"
+GLOBAL_SETTINGS_MAX_UPLOAD_SIZE_MB_KEY = "max_file_upload_size_mb"
 
 
 def _parse_extensions(raw):
@@ -134,11 +135,36 @@ def get_gis_archive_allowed_extensions():
     return DEFAULT_GIS_ARCHIVE_ALLOWED_EXTENSIONS
 
 
+def get_max_upload_size_bytes():
+    """Resolve the maximum upload size (in bytes) dynamically, without requiring a code change.
+
+    Resolution order:
+      1. `GlobalSettings` DB row keyed on `max_file_upload_size_mb` (admin-editable, value in MB).
+      2. `settings.FILE_UPLOAD_MAX_MEMORY_SIZE` (bytes; default 15728640 / 15 MB).
+
+    Any failure (missing table during migrations/tests, DB not ready, bad
+    config value, etc.) is swallowed and resolution falls through to the
+    next source, so this function can never itself break a save().
+    """
+    try:
+        from disturbance.components.main.models import GlobalSettings  # local import: avoids circular import with main.models
+
+        row = GlobalSettings.objects.filter(key=GLOBAL_SETTINGS_MAX_UPLOAD_SIZE_MB_KEY).first()
+        if row is not None:
+            mb_value = float(row.value)
+            if mb_value > 0:
+                return int(mb_value * 1024 * 1024)
+    except Exception:
+        logger.exception("Unable to resolve max upload size from GlobalSettings; falling back.")
+
+    return getattr(settings, "FILE_UPLOAD_MAX_MEMORY_SIZE", 15728640)
+
+
 def validate_uploaded_file(
     file_obj,
     allowed_extensions=None,
     allow_compressed=False,
-    max_upload_size=DEFAULT_MAX_UPLOAD_SIZE,
+    max_upload_size=None,
 ):
     """Validate a single uploaded file object against the DAS whitelist policy.
 
@@ -149,18 +175,25 @@ def validate_uploaded_file(
 
     `allowed_extensions=None` (the default) resolves the whitelist dynamically
     via `get_standard_allowed_extensions()`; pass an explicit set to override.
+
+    `max_upload_size=None` (the default) resolves the byte limit dynamically
+    via `get_max_upload_size_bytes()`; pass an explicit integer to override.
     """
     if allowed_extensions is None:
         allowed_extensions = get_standard_allowed_extensions()
+    if max_upload_size is None:
+        max_upload_size = get_max_upload_size_bytes()
 
     name = getattr(file_obj, "name", "") or ""
     ext = os.path.splitext(name)[1].lower()
 
     size = getattr(file_obj, "size", None)
     if size is not None and size > max_upload_size:
+        size_mb = size / (1024 * 1024)
+        max_mb = max_upload_size / (1024 * 1024)
         raise ValidationError(
-            f"File '{name}' ({size} bytes) exceeds the maximum allowed size "
-            f"of {max_upload_size} bytes."
+            f"File '{name}' ({size_mb:.2f} MB) exceeds the maximum allowed size "
+            f"of {max_mb:.2f} MB."
         )
 
     if ext in COMPRESSED_EXTENSIONS:
@@ -242,13 +275,15 @@ class SanitiseFileMixin:
             (e.g. ProposalMapDocument) to override the dynamic whitelist.
         allow_compressed: whether a .zip archive is accepted at all
             (default False).
-        max_upload_size: max bytes accepted (default DEFAULT_MAX_UPLOAD_SIZE).
+        max_upload_size: max bytes accepted; if left as None (the default),
+            resolved dynamically per-save via get_max_upload_size_bytes().
+            Set explicitly on a model to override the dynamic limit.
     """
 
     sanitise_file_field = "_file"
     allowed_extensions = None
     allow_compressed = False
-    max_upload_size = DEFAULT_MAX_UPLOAD_SIZE
+    max_upload_size = None
 
     def _validate_sanitised_file(self):
         file_obj = getattr(self, self.sanitise_file_field, None)
