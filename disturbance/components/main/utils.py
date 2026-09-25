@@ -473,3 +473,19 @@ def formatExportData(model, data, format):
             file_buffer = f.read()    
         return ('Disturbance - {} Report.csv'.format(model.capitalize()), file_buffer, 'application/csv')
 
+
+def handle_validation_error(e):
+    """Safely convert a Django ValidationError to a string/repr for serializers.ValidationError.
+
+    Guarantees 100% backward compatibility with existing `repr(e.error_dict)`
+    while safely falling back to message_dict, messages, or str(e) to prevent AttributeError.
+    """
+    if hasattr(e, 'error_dict'):
+        return repr(e.error_dict)
+    if hasattr(e, 'message_dict'):
+        return repr(e.message_dict)
+    if hasattr(e, 'messages'):
+        return repr(e.messages)
+    return str(e)
+
+
