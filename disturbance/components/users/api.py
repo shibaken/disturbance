@@ -41,6 +41,7 @@ from disturbance.components.users.serializers import   (
 
                                             )
 from disturbance.helpers import is_customer, is_internal
+from disturbance.components.main.utils import handle_validation_error
 #from disturbance.components.main.utils import retrieve_department_users
 
 #class DepartmentUserList(views.APIView):
@@ -127,7 +128,7 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
             raise
         except ValidationError as e:
             print(traceback.print_exc())
-            raise serializers.ValidationError(repr(e.error_dict))
+            raise serializers.ValidationError(handle_validation_error(e))
         except Exception as e:
             print(traceback.print_exc())
             raise serializers.ValidationError(str(e))
@@ -168,7 +169,7 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
             raise
         except ValidationError as e:
             print(traceback.print_exc())
-            raise serializers.ValidationError(repr(e.error_dict))
+            raise serializers.ValidationError(handle_validation_error(e))
         except Exception as e:
             print(traceback.print_exc())
             raise serializers.ValidationError(str(e))
@@ -241,7 +242,7 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
             raise
         except ValidationError as e:
             print(traceback.print_exc())
-            raise serializers.ValidationError(repr(e.error_dict))
+            raise serializers.ValidationError(handle_validation_error(e))
         except Exception as e:
             print(traceback.print_exc())
             raise serializers.ValidationError(str(e))
@@ -264,7 +265,7 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
             raise
         except ValidationError as e:
             print(traceback.print_exc())
-            raise serializers.ValidationError(repr(e.error_dict))
+            raise serializers.ValidationError(handle_validation_error(e))
         except Exception as e:
             print(traceback.print_exc())
             raise serializers.ValidationError(str(e))
@@ -284,7 +285,7 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
             raise
         except ValidationError as e:
             print(traceback.print_exc())
-            raise serializers.ValidationError(repr(e.error_dict))
+            raise serializers.ValidationError(handle_validation_error(e))
         except Exception as e:
             print(traceback.print_exc())
             raise serializers.ValidationError(str(e))
