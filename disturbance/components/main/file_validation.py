@@ -44,6 +44,7 @@ MAX_ARCHIVE_UNCOMPRESSED_SIZE = 100 * 1024 * 1024  # 100 MB
 GLOBAL_SETTINGS_ALLOWED_EXTENSIONS_KEY = "allowed_file_extensions"
 GLOBAL_SETTINGS_ALLOWED_GIS_ARCHIVE_EXTENSIONS_KEY = "allowed_gis_archive_extensions"
 GLOBAL_SETTINGS_MAX_UPLOAD_SIZE_MB_KEY = "max_file_upload_size_mb"
+GLOBAL_SETTINGS_MAX_UPLOAD_SIZE_MB_INTERNAL_KEY = "max_file_upload_size_mb_internal"
 
 
 def _parse_extensions(raw):
@@ -135,10 +136,14 @@ def get_gis_archive_allowed_extensions():
     return DEFAULT_GIS_ARCHIVE_ALLOWED_EXTENSIONS
 
 
-def get_max_upload_size_bytes():
+def get_max_upload_size_bytes(is_internal=False):
     """Resolve the maximum upload size (in bytes) dynamically, without requiring a code change.
 
-    Resolution order:
+    Resolution order (is_internal=True):
+      1. `GlobalSettings` DB row keyed on `max_file_upload_size_mb_internal` (admin-editable, value in MB).
+      2. Falls back to the external (is_internal=False) resolution below if missing/invalid.
+
+    Resolution order (is_internal=False, the default):
       1. `GlobalSettings` DB row keyed on `max_file_upload_size_mb` (admin-editable, value in MB).
       2. `settings.FILE_UPLOAD_MAX_MEMORY_SIZE` (bytes; default 15728640 / 15 MB).
 
@@ -146,6 +151,19 @@ def get_max_upload_size_bytes():
     config value, etc.) is swallowed and resolution falls through to the
     next source, so this function can never itself break a save().
     """
+    if is_internal:
+        try:
+            from disturbance.components.main.models import GlobalSettings  # local import: avoids circular import with main.models
+
+            row = GlobalSettings.objects.filter(key=GLOBAL_SETTINGS_MAX_UPLOAD_SIZE_MB_INTERNAL_KEY).first()
+            if row is not None:
+                mb_value = float(row.value)
+                if mb_value > 0:
+                    return int(mb_value * 1024 * 1024)
+        except Exception:
+            logger.exception("Unable to resolve internal max upload size from GlobalSettings; falling back.")
+        return get_max_upload_size_bytes(is_internal=False)
+
     try:
         from disturbance.components.main.models import GlobalSettings  # local import: avoids circular import with main.models
 
@@ -165,6 +183,7 @@ def validate_uploaded_file(
     allowed_extensions=None,
     allow_compressed=False,
     max_upload_size=None,
+    is_internal=False,
 ):
     """Validate a single uploaded file object against the DAS whitelist policy.
 
@@ -177,12 +196,14 @@ def validate_uploaded_file(
     via `get_standard_allowed_extensions()`; pass an explicit set to override.
 
     `max_upload_size=None` (the default) resolves the byte limit dynamically
-    via `get_max_upload_size_bytes()`; pass an explicit integer to override.
+    via `get_max_upload_size_bytes(is_internal=is_internal)`; pass an explicit
+    integer to override. `is_internal=True` resolves the higher internal-user
+    limit instead of the external/default limit.
     """
     if allowed_extensions is None:
         allowed_extensions = get_standard_allowed_extensions()
     if max_upload_size is None:
-        max_upload_size = get_max_upload_size_bytes()
+        max_upload_size = get_max_upload_size_bytes(is_internal=is_internal)
 
     name = getattr(file_obj, "name", "") or ""
     ext = os.path.splitext(name)[1].lower()
@@ -278,12 +299,16 @@ class SanitiseFileMixin:
         max_upload_size: max bytes accepted; if left as None (the default),
             resolved dynamically per-save via get_max_upload_size_bytes().
             Set explicitly on a model to override the dynamic limit.
+        is_internal: whether this Document belongs to an internal-only
+            (DBCA staff) upload flow; resolves the internal size limit
+            instead of the external/default one (default False).
     """
 
     sanitise_file_field = "_file"
     allowed_extensions = None
     allow_compressed = False
     max_upload_size = None
+    is_internal = False
 
     def _validate_sanitised_file(self):
         file_obj = getattr(self, self.sanitise_file_field, None)
@@ -294,6 +319,7 @@ class SanitiseFileMixin:
             allowed_extensions=self.allowed_extensions,
             allow_compressed=self.allow_compressed,
             max_upload_size=self.max_upload_size,
+            is_internal=getattr(self, 'is_internal', False),
         )
 
     def clean(self):
