@@ -316,6 +316,7 @@ class GlobalSettings(SanitisationModelMixin, models.Model):
     MAX_NO_POLYGONS='max_no_polygon'
     ALLOWED_FILE_EXTENSIONS='allowed_file_extensions'
     ALLOWED_GIS_ARCHIVE_EXTENSIONS='allowed_gis_archive_extensions'
+    MAX_FILE_UPLOAD_SIZE_MB = 'max_file_upload_size_mb'
 
     keys = (
         (KEY_ASSESSMENT_REMINDER_DAYS, 'Assessment reminder days'),
@@ -335,6 +336,7 @@ class GlobalSettings(SanitisationModelMixin, models.Model):
         (MAX_NO_POLYGONS, 'Maximum number of polygons allowed in the Shapefile'),
         (ALLOWED_FILE_EXTENSIONS, 'Allowed File Extensions (Standard)'),
         (ALLOWED_GIS_ARCHIVE_EXTENSIONS, 'Allowed GIS Archive Extensions'),
+        (MAX_FILE_UPLOAD_SIZE_MB, 'Maximum File Upload Size (MB)'),
         
     )
     default_values = (
