@@ -286,4 +286,38 @@ export default{
             return raw;
         }
     },
+    // Centralized parser for fetch Response objects, Error instances, or plain strings/objects,
+    // extracting a human-readable message from DRF-style error payloads.
+    parseError: async function(response) {
+        if (!response) return 'An unexpected error occurred.';
+        if (typeof response === 'string') return response;
+        if (response instanceof Error) return response.message || 'An unexpected error occurred.';
+
+        try {
+            if (typeof response.json === 'function') {
+                const errorJson = await response.json();
+                if (Array.isArray(errorJson)) {
+                    return errorJson.map(item => {
+                        if (typeof item === 'string' && (item.startsWith('[') || item.startsWith('{'))) {
+                            try { return JSON.parse(item); } catch (e) { return item; }
+                        }
+                        return item;
+                    }).flat().join(' ');
+                }
+                if (typeof errorJson === 'object' && errorJson !== null) {
+                    return Object.values(errorJson).flat().join(' ');
+                }
+                return String(errorJson);
+            }
+        } catch (e) {
+            try {
+                if (typeof response.text === 'function') {
+                    return await response.text();
+                }
+            } catch (e2) {
+                return response.statusText || 'An unexpected error occurred.';
+            }
+        }
+        return response.statusText || 'An unexpected error occurred.';
+    },
 };
