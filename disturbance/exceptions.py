@@ -53,12 +53,12 @@ def custom_exception_handler(exc, context):
 
     # handle django validation errors
     elif isinstance(exc, ValidationError):
-        if hasattr(exc, "error_dict"):
-            exc = serializers.ValidationError(repr(exc.error_dict))
-        elif hasattr(exc, "message"):
-            exc = serializers.ValidationError(exc.message)
+        # A ValidationError raised from a message list (e.g. file validation) has no
+        # error_dict/message_dict, so fall back to messages/str instead of raising AttributeError.
+        if hasattr(exc, "error_dict") or hasattr(exc, "message_dict"):
+            exc = serializers.ValidationError(exc.message_dict)
         else:
-            exc = serializers.ValidationError(str(exc))
+            exc = serializers.ValidationError(getattr(exc, "messages", str(exc)))
 
     else:
         # Handle all other exceptions
