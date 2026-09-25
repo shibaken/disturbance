@@ -337,13 +337,7 @@ export default {
                 .catch(async error => {
                     vm.errors = true;
                     vm.issuingApproval = false;
-                    try {
-                        const errData = await error.json();
-                        //vm.errorString = helpers.apiVueResourceError(errData);
-                        vm.errorString = errData;
-                    } catch {
-                        vm.errorString = 'An unexpected error occurred.';
-                    }
+                    vm.errorString = await helpers.parseError(error);
                 });
             }
             else if (vm.state == 'final_approval') {
@@ -366,13 +360,7 @@ export default {
                 .catch(async error => {
                     vm.errors = true;
                     vm.issuingApproval = false;
-                    try {
-                        const errData = await error.json();
-                        //vm.errorString = helpers.apiVueResourceError(errData);
-                        vm.errorString = errData;
-                    } catch {
-                        vm.errorString = 'An unexpected error occurred.';
-                    }
+                    vm.errorString = await helpers.parseError(error);
                 });
             }
            
