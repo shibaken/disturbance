@@ -9,7 +9,7 @@ def seed_file_extension_settings(apps, schema_editor):
     )
     GlobalSettings.objects.update_or_create(
         key='allowed_gis_archive_extensions',
-        defaults={'value': 'shp, shx, dbf, prj, sbn, sbx, cpg, qix, xml, geojson, json, gpkg'},
+        defaults={'value': 'cpg, dbf, geojson, gdb, gpkg, gpx, json, prj, qix, sbn, sbx, shp, shx, xml'},
     )
 
 
