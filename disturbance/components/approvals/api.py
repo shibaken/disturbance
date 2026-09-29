@@ -289,7 +289,7 @@ class ApprovalViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin):
             raise
         except ValidationError as e:
             print(traceback.print_exc())
-            handle_validation_error(e)
+            raise serializers.ValidationError(handle_validation_error(e))
         except Exception as e:
             print(traceback.print_exc())
             raise serializers.ValidationError(str(e))
@@ -369,7 +369,7 @@ class ApprovalViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin):
             raise
         except ValidationError as e:
             print(traceback.print_exc())
-            handle_validation_error(e)
+            raise serializers.ValidationError(handle_validation_error(e))
         except Exception as e:
             print(traceback.print_exc())
             raise serializers.ValidationError(str(e))
@@ -386,7 +386,7 @@ class ApprovalViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin):
             raise
         except ValidationError as e:
             print(traceback.print_exc())
-            handle_validation_error(e)
+            raise serializers.ValidationError(handle_validation_error(e))
         except Exception as e:
             print(traceback.print_exc())
             raise serializers.ValidationError(str(e))
@@ -405,7 +405,7 @@ class ApprovalViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin):
             raise
         except ValidationError as e:
             print(traceback.print_exc())
-            handle_validation_error(e)
+            raise serializers.ValidationError(handle_validation_error(e))
         except Exception as e:
             print(traceback.print_exc())
             raise serializers.ValidationError(str(e))
@@ -422,7 +422,7 @@ class ApprovalViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin):
             raise
         except ValidationError as e:
             print(traceback.print_exc())
-            handle_validation_error(e)
+            raise serializers.ValidationError(handle_validation_error(e))
         except Exception as e:
             print(traceback.print_exc())
             raise serializers.ValidationError(str(e))
@@ -476,7 +476,7 @@ class ApprovalViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin):
             raise
         except ValidationError as e:
             print(traceback.print_exc())
-            raise serializers.ValidationError(repr(e.error_dict))
+            raise serializers.ValidationError(handle_validation_error(e))
         except Exception as e:
             print(traceback.print_exc())
             raise serializers.ValidationError(str(e))
@@ -535,7 +535,7 @@ class ApprovalViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin):
             raise
         except ValidationError as e:
             print(traceback.print_exc())
-            raise serializers.ValidationError(repr(e.error_dict))
+            raise serializers.ValidationError(handle_validation_error(e))
         except Exception as e:
             print(traceback.print_exc())
             raise serializers.ValidationError(str(e))
@@ -566,7 +566,7 @@ class ApprovalViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin):
             raise
         except ValidationError as e:
             print(traceback.print_exc())
-            raise serializers.ValidationError(repr(e.error_dict))
+            raise serializers.ValidationError(handle_validation_error(e))
         except Exception as e:
             print(traceback.print_exc())
             raise serializers.ValidationError(str(e))
@@ -608,7 +608,7 @@ class ApprovalViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin):
             raise
         except ValidationError as e:
             print(traceback.print_exc())
-            raise serializers.ValidationError(repr(e.error_dict))
+            raise serializers.ValidationError(handle_validation_error(e))
         except Exception as e:
             print(traceback.print_exc())
             raise serializers.ValidationError(str(e))
@@ -633,7 +633,7 @@ class ApprovalViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin):
             raise
         except ValidationError as e:
             print(traceback.print_exc())
-            raise serializers.ValidationError(repr(e.error_dict))
+            raise serializers.ValidationError(handle_validation_error(e))
         except Exception as e:
             print(traceback.print_exc())
             raise serializers.ValidationError(str(e))

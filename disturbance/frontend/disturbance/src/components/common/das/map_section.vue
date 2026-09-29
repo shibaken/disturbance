@@ -41,7 +41,7 @@
                                 It is preferable that the Shapefile is in GDA94 latitude/longitude only.
                             </li>
                             <li>
-                                Max file size is 10MB.
+                                Max file size is {{ max_file_size_mb }}MB.
                             </li>
                             <li>
                                 Valid shapefile must include 4 files, in .dbf .prj .shp and .shx format.
@@ -246,6 +246,17 @@
                     }
                 }
                 return '';
+            },
+            max_file_size_mb: function(){
+                let vm = this;
+                if (vm.global_settings && vm.global_settings.length > 0) {
+                    for (var i = 0; i < vm.global_settings.length; i++) {
+                        if (vm.global_settings[i].key === 'max_file_upload_size_mb') {
+                            return vm.global_settings[i].value;
+                        }
+                    }
+                }
+                return '15';
             },
         },
         methods:{

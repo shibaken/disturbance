@@ -1,6 +1,8 @@
 <template lang="html">
       <div class="col-sm-12">
 
+        <alert v-if="showError" type="danger"><strong>{{errorString}}</strong></alert>
+
         <!--<div v-if="uploaded_documents.length>0" class="form-group">-->
         <div v-if="has_uploaded_docs" class="form-group">
             <div class="row">
@@ -62,12 +64,16 @@
 </template>
 
 <script>
+import alert from '@vue-utils/alert.vue'
 import {
   helpers
 }
 from '@/utils/hooks'
 export default {
     name: 'FileField',
+    components: {
+        alert
+    },
     props:{
         proposal_id: null,
         required_doc_id:null,
@@ -98,7 +104,6 @@ export default {
         delete_url: String,
         uploaded_documents: Array,
     },
-    components: {},
     data:function(){
         return {
             repeat:1,
@@ -107,6 +112,8 @@ export default {
             show_spinner: false,
             documents:[],
             filename:null,
+            errors: false,
+            errorString: '',
         }
     },
     computed: {
@@ -115,6 +122,9 @@ export default {
         },
         has_uploaded_docs: function() {
           return this.uploaded_documents ? true : false;
+        },
+        showError: function() {
+            return this.errors;
         }
     },
     methods:{
@@ -183,6 +193,7 @@ export default {
             /* deletes, previously saved file, from the server */
             const vm = this;
             vm.show_spinner = true;
+            vm.errors = false;
 
             const data = {
                 id: file.id,
@@ -212,14 +223,16 @@ export default {
                         });
 
                         if (!response.ok) {
-                            throw new Error(`HTTP error! Status: ${response.status}`);
+                            const errorText = await helpers.parseError(response);
+                            throw new Error(errorText);
                         }
 
                         const responseData = await response.json();
                         vm.uploaded_documents = responseData;
                         vm.$emit('refreshFromResponse', responseData);
                     } catch (err) {
-                        console.error('Fetch error:', err);
+                        vm.errors = true;
+                        vm.errorString = err.message || 'An unexpected error occurred.';
                     } finally {
                         vm.show_spinner = false;
                     }

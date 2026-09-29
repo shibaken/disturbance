@@ -204,19 +204,6 @@ def get_region_district(wkb_geometry):
         return ''
 
 
-def handle_validation_error(e):
-    # if hasattr(e, 'error_dict'):
-    #     raise serializers.ValidationError(repr(e.error_dict))
-    # else:
-    #     raise serializers.ValidationError(repr(e[0].encode('utf-8')))
-    if hasattr(e, 'error_dict'):
-        raise serializers.ValidationError(repr(e.error_dict))
-    else:
-        if hasattr(e, 'message'):
-            raise serializers.ValidationError(e.message)
-        else:
-            raise
-
 
 def suffix(d):
     return 'th' if 11 <= d <= 13 else {1: 'st', 2: 'nd', 3: 'rd'}.get(d % 10, 'th')
@@ -472,4 +459,20 @@ def formatExportData(model, data, format):
         with open(file_name, 'rb') as f:
             file_buffer = f.read()    
         return ('Disturbance - {} Report.csv'.format(model.capitalize()), file_buffer, 'application/csv')
+
+
+def handle_validation_error(e):
+    """Safely convert a Django ValidationError to a string/repr for serializers.ValidationError.
+
+    Guarantees 100% backward compatibility with existing `repr(e.error_dict)`
+    while safely falling back to message_dict, messages, or str(e) to prevent AttributeError.
+    """
+    if hasattr(e, 'error_dict'):
+        return repr(e.error_dict)
+    if hasattr(e, 'message_dict'):
+        return repr(e.message_dict)
+    if hasattr(e, 'messages'):
+        return repr(e.messages)
+    return str(e)
+
 

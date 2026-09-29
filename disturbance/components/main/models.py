@@ -14,6 +14,8 @@ from django.db.models import JSONField
 from django.utils import timezone
 from django.core.cache import cache
 from django.utils.html import strip_tags
+from disturbance.components.main.sanitisation import SanitisationModelMixin
+from disturbance.components.main.file_validation import SanitiseFileMixin
 
 class MapLayer(models.Model):
     display_name = models.CharField(max_length=100, blank=True, null=True)
@@ -245,7 +247,7 @@ class CommunicationsLogEntry(models.Model):
         app_label = 'disturbance'
 
 
-class Document(models.Model):
+class Document(SanitiseFileMixin, models.Model):
     name = models.CharField(max_length=255, blank=True,
                             verbose_name='name', help_text='')
     description = models.TextField(blank=True,
@@ -269,7 +271,7 @@ class Document(models.Model):
         return self.name or self.filename
 
 
-class SystemMaintenance(models.Model):
+class SystemMaintenance(SanitisationModelMixin, models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField()
     start_date = models.DateTimeField()
@@ -294,7 +296,9 @@ class SystemMaintenance(models.Model):
 # from django_ckeditor_5.fields import CKEditor5Field
 from tinymce.models import HTMLField
 
-class GlobalSettings(models.Model):
+class GlobalSettings(SanitisationModelMixin, models.Model):
+    sanitise_exclude_fields = {"help_text"}
+
     KEY_ASSESSMENT_REMINDER_DAYS = 'assessment_reminder_days'
     DAS_SHAREPOINT_PAGE = 'das_sharepoint_page'
     PROPOSAL_ASSESS_HELP_PAGE ='proposal_assess_help_page'
@@ -310,6 +314,10 @@ class GlobalSettings(models.Model):
     SUB_ACTIVITY_2_HELP='sub_activity_2_help_url'
     CATEGORY_HELP='category_help_url'
     MAX_NO_POLYGONS='max_no_polygon'
+    ALLOWED_FILE_EXTENSIONS='allowed_file_extensions'
+    ALLOWED_GIS_ARCHIVE_EXTENSIONS='allowed_gis_archive_extensions'
+    MAX_FILE_UPLOAD_SIZE_MB = 'max_file_upload_size_mb'
+    MAX_FILE_UPLOAD_SIZE_MB_INTERNAL = 'max_file_upload_size_mb_internal'
 
     keys = (
         (KEY_ASSESSMENT_REMINDER_DAYS, 'Assessment reminder days'),
@@ -327,6 +335,10 @@ class GlobalSettings(models.Model):
         (SUB_ACTIVITY_2_HELP, 'Sub activity 2 help url'),
         (CATEGORY_HELP, 'Category help url'),
         (MAX_NO_POLYGONS, 'Maximum number of polygons allowed in the Shapefile'),
+        (ALLOWED_FILE_EXTENSIONS, 'Allowed File Extensions (Standard)'),
+        (ALLOWED_GIS_ARCHIVE_EXTENSIONS, 'Allowed GIS Archive Extensions'),
+        (MAX_FILE_UPLOAD_SIZE_MB, 'Maximum File Upload Size (MB)'),
+        (MAX_FILE_UPLOAD_SIZE_MB_INTERNAL, 'Maximum File Upload Size for Internal Users (MB)'),
         
     )
     default_values = (
@@ -433,7 +445,7 @@ class TaskMonitor(models.Model):
     def __str__(self):
         return f'Task {self.task_id}, Proposal: {self.proposal}'
 
-class JobQueue(models.Model):
+class JobQueue(SanitisationModelMixin, models.Model):
     STATUS = (
        (0, 'Pending'),
        (1, 'Running'),
@@ -456,7 +468,8 @@ class JobQueue(models.Model):
         app_label = 'disturbance' 
 
 from tinymce.models import HTMLField
-class Notice(models.Model):
+class Notice(SanitisationModelMixin, models.Model):
+    sanitise_exclude_fields = {"message"}
 
     NOTICE_TYPE_CHOICES = (
         (0, 'Red Warning'),

@@ -68,6 +68,7 @@ from disturbance.components.proposals.sqs_utils.permissions import InternalSpati
 
 from disturbance.components.main.utils import (
     check_db_connection,
+    handle_validation_error,
 )
 import logging
 logger = logging.getLogger(__name__)
@@ -203,7 +204,7 @@ class ProposalSqsViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin):
             raise
         except ValidationError as e:
             print(traceback.print_exc())
-            handle_validation_error(e)
+            raise serializers.ValidationError(handle_validation_error(e))
         except Exception as e:
             print(traceback.print_exc())
             raise serializers.ValidationError(str(e))
@@ -224,7 +225,7 @@ class ProposalSqsViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin):
             raise
         except ValidationError as e:
             print(traceback.print_exc())
-            handle_validation_error(e)
+            raise serializers.ValidationError(handle_validation_error(e))
         except Exception as e:
             print(traceback.print_exc())
             raise serializers.ValidationError(str(e))
@@ -1912,10 +1913,7 @@ class SpatialQueryQuestionViewSet(viewsets.GenericViewSet, mixins.RetrieveModelM
             raise
 
         except ValidationError as e:
-            if hasattr(e, 'error_dict'):
-                raise serializers.ValidationError(repr(e.error_dict))
-            else:
-                raise serializers.ValidationError(repr(e[0]))
+            raise serializers.ValidationError(handle_validation_error(e))
 
         except Exception as e:
             logger.error(str(e))
@@ -2226,10 +2224,7 @@ class SpatialQueryQuestionViewSet(viewsets.GenericViewSet, mixins.RetrieveModelM
             raise
 
         except ValidationError as e:
-            if hasattr(e, 'error_dict'):
-                raise serializers.ValidationError(repr(e.error_dict))
-            else:
-                raise serializers.ValidationError(repr(e[0]))
+            raise serializers.ValidationError(handle_validation_error(e))
 
         except Exception as e:
             logger.exception()
@@ -2291,10 +2286,7 @@ class SpatialQueryQuestionViewSet(viewsets.GenericViewSet, mixins.RetrieveModelM
             raise serializers.ValidationError(str(e))
             
         except ValidationError as e:
-            if hasattr(e, 'error_dict'):
-                raise serializers.ValidationError(repr(e.error_dict))
-            else:
-                raise serializers.ValidationError(repr(e[0]))
+            raise serializers.ValidationError(handle_validation_error(e))
 
         except Exception as e:
             logger.exception(str(e))
@@ -2433,10 +2425,7 @@ class SpatialQueryLayerViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixi
             raise
 
         except ValidationError as e:
-            if hasattr(e, 'error_dict'):
-                raise serializers.ValidationError(repr(e.error_dict))
-            else:
-                raise serializers.ValidationError(repr(e[0]))
+            raise serializers.ValidationError(handle_validation_error(e))
 
         except Exception as e:
             logger.exception()
@@ -2565,10 +2554,7 @@ class SpatialQueryLayerViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixi
             raise
 
         except ValidationError as e:
-            if hasattr(e, 'error_dict'):
-                raise serializers.ValidationError(repr(e.error_dict))
-            else:
-                raise serializers.ValidationError(repr(e[0]))
+            raise serializers.ValidationError(handle_validation_error(e))
 
         except Exception as e:
             logger.exception()

@@ -26,7 +26,7 @@ def basic_exception_handler(func):
             raise
         except ValidationError as e:
             from disturbance.components.main.utils import handle_validation_error
-            handle_validation_error(e)
+            raise serializers.ValidationError(handle_validation_error(e))
         except Exception as e:
             logger.error(traceback.print_exc())
             raise serializers.ValidationError(str(e))
@@ -56,13 +56,8 @@ def api_exception_handler(func):
             print(traceback.print_exc())
             raise   
         except ValidationError as e:
-            if hasattr(e, 'error_dict'):
-                raise serializers.ValidationError(repr(e.error_dict))
-            else:
-                if hasattr(e, 'message'):
-                    raise serializers.ValidationError(e.message)
-                else:
-                    raise
+            from disturbance.components.main.utils import handle_validation_error
+            raise serializers.ValidationError(handle_validation_error(e))
         except Exception as e:
             logger.error(traceback.print_exc())
             raise serializers.ValidationError(str(e))

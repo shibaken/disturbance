@@ -6,6 +6,7 @@ from disturbance.components.approvals import models #TODO: improvable - this sho
 from django.conf import settings
 
 from disturbance.components.proposals.models import Proposal
+from disturbance.helpers import is_internal as request_is_internal
     
 
 private_storage = models.private_storage
@@ -120,6 +121,7 @@ def save_document(request, instance, comms_instance, document_type, input_name=N
             path = private_storage.save(path_format_string.format(settings.MEDIA_DIR, id_number, filename), ContentFile(_file.read()))
             print(path)
             document._file = path
+            document.is_internal = request_is_internal(request)
             document.save()
 
         # comms_log doc store save
@@ -135,6 +137,7 @@ def save_document(request, instance, comms_instance, document_type, input_name=N
                     _file.read()))
 
             document._file = path
+            document.is_internal = request_is_internal(request)
             document.save()
 
         # default doc store save
@@ -150,11 +153,12 @@ def save_document(request, instance, comms_instance, document_type, input_name=N
                     _file.read()))
 
             document._file = path
+            document.is_internal = request_is_internal(request)
             document.save()
 
 
 # For transferring files from temp doc objs to comms_log objs
-def save_comms_log_document_obj(instance, comms_instance, temp_document):
+def save_comms_log_document_obj(request, instance, comms_instance, temp_document):
     document = comms_instance.documents.get_or_create(
         name=temp_document.name)[0]
     path = private_storage.save(
@@ -168,6 +172,7 @@ def save_comms_log_document_obj(instance, comms_instance, temp_document):
         )
 
     document._file = path
+    document.is_internal = request_is_internal(request)
     document.save()
 
 # For transferring files from temp doc objs to default doc objs

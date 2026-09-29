@@ -209,24 +209,28 @@ export default {
                 method: 'POST',
                 body: data // FormData handles headers automatically
                 })
-                .then(response => {
-                    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-                    return response.json();
-                })
-                .then(res => {
+                .then(async response => {
+                    if (!response.ok) {
+                        const errorText = await helpers.parseError(response);
+                        await swal.fire({
+                            title: 'Error',
+                            text: errorText,
+                            icon: 'error',
+                            customClass: {
+                                confirmButton: 'btn btn-primary',
+                            },
+                        });
+                        return;
+                    }
+                    const res = await response.json();
                     //vm.proposal = res;
                     Object.assign(vm.proposal, res);
                     vm.$emit('refreshFromResponse', res);
                 })
                 .catch(async err => {
                     console.log(err);
-                    let errorText = 'An unexpected error occurred.';
-                    try {
-                        const errData = await err.json();
-                        // errorText = helpers.apiVueResourceError(errData);
-                        errorText = errData;
-                    } catch { console.log('Error parsing error response'); }
-                    
+                    const errorText = await helpers.parseError(err);
+
                     swal.fire({
                         title:'Submit Error', 
                         text:errorText,

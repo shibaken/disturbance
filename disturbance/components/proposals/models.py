@@ -48,6 +48,8 @@ from disturbance.components.organisations.models import Organisation
 from disturbance.components.main.models import CommunicationsLogEntry, UserAction, Document, Region, District, \
     ApplicationType, DASMapLayer, TaskMonitor, RequestTypeEnum
 from disturbance.components.main.utils import get_department_user
+from disturbance.components.main.sanitisation import SanitisationModelMixin
+from disturbance.components.main.file_validation import STANDARD_ALLOWED_EXTENSIONS, GIS_ARCHIVE_ALLOWED_EXTENSIONS
 from disturbance.components.proposals.email import (
         send_referral_email_notification,
         send_proposal_decline_email_notification,
@@ -309,6 +311,8 @@ class ProposalMapDocument(Document):
     can_delete = models.BooleanField(default=True) # after initial submit prevent document from being deleted
     can_hide= models.BooleanField(default=False) # after initial submit, document cannot be deleted but can be hidden
     hidden=models.BooleanField(default=False) # after initial submit prevent document from being deleted
+    allow_compressed = True  # accepts shapefile-bundle .zip archives in addition to individual .shp/.shx/.dbf/.prj uploads
+    allowed_extensions = STANDARD_ALLOWED_EXTENSIONS | GIS_ARCHIVE_ALLOWED_EXTENSIONS
 
     def delete(self):
         if self.can_delete:
@@ -338,7 +342,7 @@ def fee_invoice_references_default():
     return []
 
 
-class Proposal(DirtyFieldsMixin, RevisionedMixin):
+class Proposal(SanitisationModelMixin, DirtyFieldsMixin, RevisionedMixin):
     CUSTOMER_STATUS_TEMP = 'temp'
     CUSTOMER_STATUS_DRAFT = 'draft'
     CUSTOMER_STATUS_WITH_ASSESSOR = 'with_assessor'
@@ -2432,6 +2436,7 @@ class Proposal(DirtyFieldsMixin, RevisionedMixin):
 
 
 class ProposalLogDocument(Document):
+    is_internal = True
     log_entry = models.ForeignKey('ProposalLogEntry',related_name='documents', on_delete=models.CASCADE)
     _file = models.FileField(upload_to=update_proposal_comms_log_filename, storage=private_storage)
 
@@ -2461,7 +2466,7 @@ class AmendmentRequestDocument(Document):
         if self.can_delete:
             return super(AmendmentRequestDocument, self).delete()
 
-class ProposalRequest(models.Model):
+class ProposalRequest(SanitisationModelMixin, models.Model):
     proposal = models.ForeignKey(Proposal, on_delete=models.CASCADE)
     subject = models.CharField(max_length=200, blank=True)
     text = models.TextField(blank=True)
@@ -2479,7 +2484,7 @@ class ComplianceRequest(ProposalRequest):
         app_label = 'disturbance'
 
 
-class AmendmentReason(models.Model):
+class AmendmentReason(SanitisationModelMixin, models.Model):
     reason = models.CharField('Reason', max_length=125)
 
     class Meta:
@@ -2578,7 +2583,7 @@ class Assessment(ProposalRequest):
     class Meta:
         app_label = 'disturbance'
 
-class ProposalDeclinedDetails(models.Model):
+class ProposalDeclinedDetails(SanitisationModelMixin, models.Model):
     proposal = models.OneToOneField(Proposal, on_delete=models.CASCADE)
     officer = models.ForeignKey(EmailUser, null=False, on_delete=models.DO_NOTHING)
     reason = models.TextField(blank=True)
@@ -2605,7 +2610,7 @@ class ProposalStandardRequirement(RevisionedMixin):
         app_label = 'disturbance'
 
 
-class ProposalRequirement(OrderedModel):
+class ProposalRequirement(SanitisationModelMixin, OrderedModel):
     #from disturbance.components.approvals.models import Approval
     RECURRENCE_PATTERNS = [(1, 'Weekly'), (2, 'Monthly'), (3, 'Yearly')]
     standard_requirement = models.ForeignKey(ProposalStandardRequirement,null=True,blank=True, on_delete=models.SET_NULL)
@@ -2712,7 +2717,7 @@ class ProposalUserAction(UserAction):
 
 
 
-class Referral(models.Model):
+class Referral(SanitisationModelMixin, models.Model):
     SENT_CHOICES = (
         (1,'Sent From Assessor'),
         (2,'Sent From Referral')
@@ -3260,7 +3265,9 @@ def get_search_geojson(proposal_lodgement_numbers,request):
 
 # from django_ckeditor_5.fields import CKEditor5Field
 from tinymce.models import HTMLField
-class HelpPage(models.Model):
+class HelpPage(SanitisationModelMixin, models.Model):
+    sanitise_exclude_fields = {"content"}
+
     HELP_TEXT_EXTERNAL = 1
     HELP_TEXT_INTERNAL = 2
     HELP_TYPE_CHOICES = (
@@ -3325,7 +3332,9 @@ class QuestionOption(models.Model):
 
 # from django_ckeditor_5.fields import CKEditor5Field
 from tinymce.models import HTMLField
-class MasterlistQuestion(models.Model):
+class MasterlistQuestion(SanitisationModelMixin, models.Model):
+    sanitise_exclude_fields = {"help_text", "help_text_assessor"}
+
     ANSWER_TYPE_CHECKBOX = 'checkbox'
     ANSWER_TYPE_RADIO = 'radiobuttons'
     ANSWER_TYPE_SELECT = 'select'
@@ -3615,7 +3624,7 @@ def limit_sectionquestion_choices_sql():
     except:
         return {}
 
-class SectionQuestion(models.Model):
+class SectionQuestion(SanitisationModelMixin, models.Model):
     TAG_CHOICES=(('isCopiedToPermit', 'isCopiedToPermit'),
                  ('isRequired', 'isRequired'),
                  ('canBeEditedByAssessor', 'canBeEditedByAssessor'),
@@ -3767,7 +3776,7 @@ class SectionQuestion(models.Model):
 #    def get_queryset(self):
 #        return super().get_queryset().exclude(expiry__lt=datetime.datetime.now().date())
 
-class SpatialQueryQuestion(RevisionedMixin):
+class SpatialQueryQuestion(SanitisationModelMixin, RevisionedMixin):
                         
     question = models.ForeignKey(MasterlistQuestion, related_name='questions', on_delete=models.PROTECT )
     answer_mlq = models.ForeignKey(QuestionOption, related_name='question_options', on_delete=models.CASCADE , blank=True, null=True)
@@ -3812,7 +3821,7 @@ class CurrentSpatialQueryLayerManager(models.Manager):
         return super().get_queryset().exclude(expiry__lt=datetime.datetime.now().date())
 
 
-class SpatialQueryLayer(RevisionedMixin):
+class SpatialQueryLayer(SanitisationModelMixin, RevisionedMixin):
     OVERLAPPING = 'Overlapping'
     OUTSIDE     = 'Outside'
     INSIDE      = 'Inside'

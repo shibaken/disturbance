@@ -14,6 +14,7 @@ from disturbance.components.approvals.pdf import create_approval_document
 from disturbance.components.organisations.models import Organisation
 from disturbance.components.proposals.models import Proposal, ProposalUserAction
 from disturbance.components.main.models import CommunicationsLogEntry, UserAction, Document
+from disturbance.components.main.sanitisation import SanitisationModelMixin
 from disturbance.components.approvals.email import (
     send_approval_expire_email_notification,
     send_approval_cancel_email_notification,
@@ -71,7 +72,7 @@ class RenewalDocument(Document):
         app_label = 'disturbance'
 
 
-class Approval(RevisionedMixin):
+class Approval(SanitisationModelMixin, RevisionedMixin):
     STATUS_CURRENT = 'current'
     STATUS_EXPIRED = 'expired'
     STATUS_CANCELLED = 'cancelled'
@@ -490,6 +491,7 @@ class ApprovalLogEntry(CommunicationsLogEntry):
         super(ApprovalLogEntry, self).save(**kwargs)
 
 class ApprovalLogDocument(Document):
+    is_internal = True
     log_entry = models.ForeignKey('ApprovalLogEntry',related_name='documents', null=True, on_delete=models.CASCADE)
     #approval = models.ForeignKey(Approval, related_name='comms_logs1')
     _file = models.FileField(upload_to=update_approval_comms_log_filename, null=True, storage=private_storage)

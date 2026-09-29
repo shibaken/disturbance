@@ -105,7 +105,7 @@
 <script>
 import modal from '@vue-utils/bootstrap-modal.vue'
 import alert from '@vue-utils/alert.vue'
-// import {helpers} from "@/utils/hooks.js"
+import { helpers } from "@/utils/hooks.js"
 export default {
     name:'Add-Comms',
     components:{
@@ -223,17 +223,16 @@ export default {
                 body: comms,
             }).then(async (response)=>{
                 if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
+                    const errorText = await helpers.parseError(response);
+                    throw new Error(errorText);
                 }
                 vm.addingComms = false;
                 vm.close();
                 //vm.$emit('refreshFromResponse',response);
-            }).catch((error) => {
+            }).catch((err) => {
                 vm.errors = true;
                 vm.addingComms = false;
-                //TODO the apiVueResourceError need to be updated
-                // vm.errorString = helpers.apiVueResourceError(error);
-                vm.errorString = error;
+                vm.errorString = err.message;
             });
         },
         addFormValidations: function() {

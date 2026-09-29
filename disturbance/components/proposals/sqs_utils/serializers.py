@@ -18,6 +18,7 @@ from disturbance.components.proposals.models import (
                                     CddpQuestionGroup,
                                 )
 from disturbance.components.main.serializers import DASMapLayerSqsSerializer
+from disturbance.components.main.sanitisation import NH3SanitizeSerializerMixin
 
 from datetime import datetime
 
@@ -36,7 +37,7 @@ class CddpQuestionGroupSerializer(serializers.ModelSerializer):
         return True if can_user_edit or (user and user.is_superuser) else False
 
 
-class SpatialQueryLayerSerializer(UniqueFieldsMixin, WritableNestedModelSerializer):
+class SpatialQueryLayerSerializer(NH3SanitizeSerializerMixin, UniqueFieldsMixin, WritableNestedModelSerializer):
     #queryset = SpatialQueryLayer.current_layers.filter()
     expiry = serializers.DateField(allow_null=True, required=False)
     buffer = serializers.IntegerField(allow_null=True, required=False)
@@ -96,7 +97,7 @@ class SpatialQueryLayerSerializer(UniqueFieldsMixin, WritableNestedModelSerializ
         return obj.layer.layer_url
 
 
-class DTSpatialQueryQuestionSerializer(UniqueFieldsMixin, WritableNestedModelSerializer):
+class DTSpatialQueryQuestionSerializer(NH3SanitizeSerializerMixin, UniqueFieldsMixin, WritableNestedModelSerializer):
     '''
     Serializer for Datatable SpatialQueryQuestion.
     '''

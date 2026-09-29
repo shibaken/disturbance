@@ -19,6 +19,7 @@ from disturbance.components.organisations.utils import (
                                 is_last_admin,
                             )
 from disturbance.components.main.serializers import CommunicationLogEntrySerializer
+from disturbance.components.main.sanitisation import NH3SanitizeSerializerMixin
 from rest_framework import serializers
 import rest_framework_gis.serializers as gis_serializers
 
@@ -178,7 +179,7 @@ class DetailsSerializer(serializers.ModelSerializer):
         model = ledger_organisation
         fields = ('id','name', 'email')
 
-class OrganisationContactSerializer(serializers.ModelSerializer):
+class OrganisationContactSerializer(NH3SanitizeSerializerMixin, serializers.ModelSerializer):
     user_status= serializers.SerializerMethodField()
     user_role= serializers.SerializerMethodField()
 
@@ -206,7 +207,7 @@ class OrgRequestRequesterSerializer(serializers.ModelSerializer):
     def get_full_name(self, obj):
         return obj.get_full_name()
 
-class OrganisationRequestSerializer(serializers.ModelSerializer):
+class OrganisationRequestSerializer(NH3SanitizeSerializerMixin, serializers.ModelSerializer):
     identification = serializers.FileField()
     requester = OrgRequestRequesterSerializer(read_only=True)
     status = serializers.SerializerMethodField()

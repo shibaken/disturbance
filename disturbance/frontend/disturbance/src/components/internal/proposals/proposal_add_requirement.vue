@@ -305,14 +305,7 @@ export default {
                 .catch(async error => {
                     vm.errors = true;
                     vm.updatingRequirement = false;
-
-                    try {
-                    const errData = await error.json();
-                    // vm.errorString = helpers.apiVueResourceError(errData);
-                    vm.errorString = errData;
-                    } catch {
-                    vm.errorString = 'An unexpected error occurred.';
-                    }
+                    vm.errorString = await helpers.parseError(error);
                 });
 
             } else {
@@ -337,13 +330,7 @@ export default {
                 .catch(async error => {
                     vm.errors = true;
                     vm.addingRequirement = false;
-
-                    try {
-                    const errData = await error.json();
-                    vm.errorString = helpers.apiVueResourceError(errData);
-                    } catch {
-                    vm.errorString = 'An unexpected error occurred.';
-                    }
+                    vm.errorString = await helpers.parseError(error);
                 });
 
             }
