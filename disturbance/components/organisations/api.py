@@ -648,7 +648,7 @@ class OrganisationViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin, mi
         try:
             with transaction.atomic():
                 instance = self.get_object()
-                request_data = request.data.copy()
+                request_data = {k: v for k, v in request.data.items() if k != 'files'}
                 request_data['organisation'] = u'{}'.format(instance.id)
                 request_data['staff'] = u'{}'.format(request.user.id)
                 serializer = OrganisationLogEntrySerializer(data=request_data)
@@ -1062,7 +1062,7 @@ class OrganisationRequestsViewSet(viewsets.ReadOnlyModelViewSet, mixins.Retrieve
         try:
             with transaction.atomic():
                 instance = self.get_object()
-                request_data = request.data.copy()
+                request_data = {k: v for k, v in request.data.items() if k != 'files'}
                 request_data['request'] = u'{}'.format(instance.id)
                 request_data['staff'] = u'{}'.format(request.user.id)
                 serializer = OrganisationRequestCommsSerializer(data=request_data)

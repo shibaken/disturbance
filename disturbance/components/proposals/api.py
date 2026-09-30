@@ -969,7 +969,7 @@ class ProposalViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin):
         try:
             with transaction.atomic():
                 instance = self.get_object()
-                request_data = request.data.copy()
+                request_data = {k: v for k, v in request.data.items() if k != 'files'}
                 request_data['proposal'] = u'{}'.format(instance.id)
                 request_data['staff'] = u'{}'.format(request.user.id)
                 serializer = ProposalLogEntrySerializer(data=request_data)
