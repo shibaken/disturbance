@@ -546,7 +546,7 @@ class ApprovalViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin):
         try:
             with transaction.atomic():
                 instance = self.get_object()
-                request_data = request.data.copy()
+                request_data = {k: v for k, v in request.data.items() if k != 'files'}
                 request_data['approval'] = u'{}'.format(instance.id)
                 request_data['staff'] = u'{}'.format(request.user.id)
                 serializer = ApprovalLogEntrySerializer(data=request_data)
