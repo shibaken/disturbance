@@ -2465,7 +2465,7 @@ class SchemaMasterlistPaginatedViewSet(viewsets.ReadOnlyModelViewSet):
         return response
 
 
-class SchemaMasterlistViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin):
+class SchemaMasterlistViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin, mixins.CreateModelMixin):
     queryset = MasterlistQuestion.objects.none()
     serializer_class = SchemaMasterlistSerializer
     permission_classes = [InternalProposalPermission]
@@ -2731,7 +2731,7 @@ class SchemaQuestionPaginatedViewSet(viewsets.ReadOnlyModelViewSet):
         return response
 
 
-class SchemaQuestionViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin):
+class SchemaQuestionViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin, mixins.CreateModelMixin):
     queryset = SectionQuestion.objects.none()
     serializer_class = SchemaQuestionSerializer
     permission_classes = [InternalProposalPermission]
@@ -3082,7 +3082,7 @@ class SchemaProposalTypePaginatedViewSet(viewsets.ReadOnlyModelViewSet):
         return response
 
 
-class SchemaProposalTypeViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin):
+class SchemaProposalTypeViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin, mixins.CreateModelMixin):
     queryset = ProposalTypeSection.objects.none()
     serializer_class = SchemaProposalTypeSerializer
     permission_classes = [InternalProposalPermission]
