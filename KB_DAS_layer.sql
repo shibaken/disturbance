@@ -12,4 +12,4 @@ pp.activity,ST_Transform(pp.shapefile_geom, 7844) AS geometry from disturbance_p
 ON ap.current_proposal_id = pp.id LEFT JOIN disturbance_organisation org ON org.id = pp.applicant_id 
 LEFT JOIN accounts_organisation lorg ON org.organisation_id = lorg.id 
 FULL JOIN disturbance_approval app ON ap.lodgement_number = app.lodgement_number 
-WHERE pp.processing_status NOT IN ('temp', 'declined', 'discarded') AND pp.shapefile_geom IS NOT NULL;
+WHERE pp.processing_status NOT IN ('temp', 'declined', 'discarded', 'draft') AND pp.shapefile_geom IS NOT NULL;
