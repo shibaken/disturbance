@@ -84,7 +84,7 @@ export function formatLength(line) {
     cloned_line.transform('EPSG:4326', 'EPSG:3857')
     const length = getLength(cloned_line);
     let output;
-    if (length > 100) {
+    if (length > 1000) {
         output = Math.round((length / 1000) * 100) / 100 + ' km';
     } else {
         output = Math.round(length * 100) / 100 + ' m';
