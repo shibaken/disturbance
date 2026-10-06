@@ -79,6 +79,7 @@ def is_org_request_assessor(request):
     return (
         request
         and request.user
+        and request.user.is_authenticated
         and (
             OrganisationAccessGroup.objects.filter(members__id=request.user.id).exists()
             or request.user.is_superuser
@@ -90,6 +91,7 @@ def is_das_approver(request):
     return (
         request
         and request.user
+        and request.user.is_authenticated
         and (
             ProposalApproverGroup.objects.filter(members__id=request.user.id).exists() or request.user.is_superuser
         )
@@ -101,6 +103,7 @@ def is_das_assessor(request):
     return (
         request
         and request.user
+        and request.user.is_authenticated
         and (
             ProposalAssessorGroup.objects.filter(members__id=request.user.id).exists() or request.user.is_superuser
         )
@@ -112,6 +115,7 @@ def is_das_referrer(request):
     return (
         request
         and request.user
+        and request.user.is_authenticated
         and (
             Referral.objects.filter(referral__id=request.user.id).exists() or request.user.is_superuser
         )
@@ -122,6 +126,7 @@ def is_internal(request):
     return (
         request
         and request.user
+        and request.user.is_authenticated
         and (
             request.user.is_superuser
             or is_departmentUser(request)
@@ -259,5 +264,4 @@ def convert_external_url_to_internal_url(url):
             url.split("." + settings.SITE_DOMAIN)
         )
     return url
-
 
