@@ -818,3 +818,10 @@ export default {
     }
 }
 </script>
+
+<style>
+/* Higher specificity than other unscoped .swal2-container rules so swal always shows above this component's modal */
+body.modal-open .swal2-container {
+    z-index: 21000 !important;
+}
+</style>
