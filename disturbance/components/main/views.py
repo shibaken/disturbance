@@ -1,5 +1,6 @@
 import logging
 from django.conf import settings
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import Http404, HttpResponse
 from django.views.generic import View, TemplateView
 from django.shortcuts import render
@@ -21,7 +22,7 @@ logger = logging.getLogger(__name__)
 #     def get(self, request, format=None):
 #         return Response({"access_token": settings.GEOCODING_ADDRESS_SEARCH_TOKEN})
 
-class FileListView(TemplateView):
+class FileListView(LoginRequiredMixin, TemplateView):
     #folder_path = settings.GEO_EXPORT_FOLDER
     template_name = 'disturbance/filelist.html'
     model = ExportDocument
@@ -104,5 +105,4 @@ class FileDownloadView(View):
             return response
         else:
             raise Http404
-
 

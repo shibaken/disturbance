@@ -49,7 +49,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class InternalView(UserPassesTestMixin, TemplateView):
+class InternalView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
     template_name = 'disturbance/dash/index.html'
 
     def test_func(self):
@@ -75,21 +75,24 @@ class ExternalView(LoginRequiredMixin, TemplateView):
     #         context['app_build_url'] = settings.DEV_APP_BUILD_URL
     #     return context
 
-class ReferralView(ReferralOwnerMixin, DetailView):
+class ReferralView(LoginRequiredMixin, ReferralOwnerMixin, DetailView):
     model = Referral
     template_name = 'disturbance/dash/index.html'
 
-class ExternalProposalView(DetailView):
+class ExternalProposalView(LoginRequiredMixin, DetailView):
     model = Proposal
     template_name = 'disturbance/dash/index.html'
 
-class ExternalComplianceView(DetailView):
+class ExternalComplianceView(LoginRequiredMixin, DetailView):
     model = Compliance
     template_name = 'disturbance/dash/index.html'
 
-class InternalComplianceView(DetailView):
+class InternalComplianceView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
     model = Compliance
     template_name = 'disturbance/dash/index.html'
+
+    def test_func(self):
+        return is_internal(self.request)
 
 class DisturbanceRoutingView(TemplateView):
     template_name = 'disturbance/index.html'
@@ -108,10 +111,13 @@ class DisturbanceContactView(TemplateView):
 class DisturbanceFurtherInformationView(TemplateView):
     template_name = 'disturbance/further_info.html'
 
-class InternalProposalView(DetailView):
+class InternalProposalView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
     #template_name = 'disturbance/index.html'
     model = Proposal
     template_name = 'disturbance/dash/index.html'
+
+    def test_func(self):
+        return is_internal(self.request)
 
     def get(self, *args, **kwargs):
         if self.request.user.is_authenticated:
@@ -227,7 +233,7 @@ def gisdata(request):
     return Response(serializer.data)
 
 
-class LedgerPayView(TemplateView):
+class LedgerPayView(LoginRequiredMixin, TemplateView):
     template_name = 'disturbance/dash/index.html'
 
     # def get_context_data(self, **kwargs):
