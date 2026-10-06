@@ -19,7 +19,8 @@ from django.views.generic.edit import FormView
 from django.core.management import call_command
 from django.views.decorators.csrf import csrf_exempt
 
-from rest_framework.decorators import api_view, renderer_classes
+from rest_framework.decorators import api_view, renderer_classes, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 from rest_framework import views, status
@@ -190,6 +191,7 @@ class ManagementCommandsView(LoginRequiredMixin, UserPassesTestMixin, TemplateVi
 
 
 class TemplateGroupView(views.APIView):
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, format=None):
         return Response({
@@ -202,6 +204,7 @@ class TemplateGroupView(views.APIView):
 
 @timeit
 @api_view(('GET',))
+@permission_classes((IsAuthenticated,))
 @renderer_classes((JSONRenderer,))
 def gisdata(request):
     layer = request.GET.get('layer', None)

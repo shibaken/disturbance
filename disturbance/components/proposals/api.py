@@ -18,6 +18,7 @@ from django.db import transaction, connection
 from django.core.exceptions import ValidationError
 from rest_framework import viewsets, serializers, status, views, mixins
 from rest_framework.decorators import action, renderer_classes
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.renderers import JSONRenderer, BrowsableAPIRenderer
 from ledger.accounts.models import EmailUser
@@ -135,6 +136,7 @@ logger = logging.getLogger(__name__)
 
 class GetProposalType(views.APIView):
     renderer_classes = [JSONRenderer, ]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, format=None):
         _type = ProposalType.objects.first()
@@ -146,6 +148,7 @@ class GetProposalType(views.APIView):
 
 class GetEmptyList(views.APIView):
     renderer_classes = [JSONRenderer, ]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, format=None):
         return Response([])
@@ -2250,6 +2253,7 @@ class AmendmentRequestViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin
 class AmendmentRequestReasonChoicesView(views.APIView):
 
     renderer_classes = [JSONRenderer,]
+    permission_classes = [InternalProposalPermission]
     def get(self,request, format=None):
         choices_list = []
         choices=AmendmentReason.objects.all()
