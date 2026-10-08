@@ -57,6 +57,7 @@ from disturbance.components.main.utils import handle_validation_error
 
 class GetCountries(views.APIView):
     renderer_classes = [JSONRenderer,]
+    permission_classes = [IsAuthenticated]
     def get(self, request, format=None):
         country_list = []
         for country in list(countries):
@@ -66,6 +67,7 @@ class GetCountries(views.APIView):
 
 class GetProfile(views.APIView):
     renderer_classes = [JSONRenderer,]
+    permission_classes = [IsAuthenticated]
     def get(self, request, format=None):
         serializer  = UserSerializer(request.user,
                 context={'request': request}

@@ -19,6 +19,7 @@ from rest_framework.response import Response
 from reversion.models import Version
 
 from disturbance.helpers import is_internal
+from disturbance.components.proposals.permissions import InternalProposalPermission
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +61,8 @@ class InternalAuthorizationView(views.APIView): # pylint: disable=too-many-ances
     """ This ViewSet adds authorization that only allows internal users to
         return data.
     """
+    permission_classes = [InternalProposalPermission]
+
     def get(self, request):
         """ Deny access to the version history for external users """
         if not is_internal(self.request):
