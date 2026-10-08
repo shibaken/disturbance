@@ -2,6 +2,7 @@ import json
 import traceback
 
 from django.conf import settings
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponse, JsonResponse, Http404
 from django.urls import reverse
 from django.shortcuts import render, redirect, get_object_or_404
@@ -22,7 +23,7 @@ import csv
 from datetime import datetime
 
 
-class ProposalView(TemplateView):
+class ProposalView(LoginRequiredMixin, TemplateView):
     template_name = 'disturbance/proposal.html'
 
     def post(self, request, *args, **kwargs):
@@ -42,7 +43,7 @@ class ProposalView(TemplateView):
 
 
 from reversion_compare.views import HistoryCompareDetailView
-class ProposalHistoryCompareView(HistoryCompareDetailView):
+class ProposalHistoryCompareView(LoginRequiredMixin, HistoryCompareDetailView):
     """
     View for reversion_compare
     """
@@ -50,7 +51,7 @@ class ProposalHistoryCompareView(HistoryCompareDetailView):
     template_name = 'disturbance/reversion_history.html'
 
 
-class ProposalHistoryLatestCompareView(HistoryCompareDetailView):
+class ProposalHistoryLatestCompareView(LoginRequiredMixin, HistoryCompareDetailView):
     """
     View for reversion_compare that returns on the x most recent revisions
     """
@@ -58,7 +59,7 @@ class ProposalHistoryLatestCompareView(HistoryCompareDetailView):
     template_name = 'disturbance/reversion_history.html'
 
 
-class ProposalFilteredHistoryCompareView(HistoryCompareDetailView):
+class ProposalFilteredHistoryCompareView(LoginRequiredMixin, HistoryCompareDetailView):
     """
     View for reversion_compare - with 'status' in the comment field only'
     """
@@ -79,7 +80,7 @@ class ProposalFilteredHistoryCompareView(HistoryCompareDetailView):
         return action_list
 
 
-class ReferralHistoryCompareView(HistoryCompareDetailView):
+class ReferralHistoryCompareView(LoginRequiredMixin, HistoryCompareDetailView):
     """
     View for reversion_compare
     """
@@ -87,7 +88,7 @@ class ReferralHistoryCompareView(HistoryCompareDetailView):
     template_name = 'disturbance/reversion_history.html'
 
 
-class ExternalProposalTemporaryUseSubmitSuccessView(TemplateView):
+class ExternalProposalTemporaryUseSubmitSuccessView(LoginRequiredMixin, TemplateView):
     model = Proposal
     template_name = 'disturbance/temporary_use_submit_success.html'
 
@@ -101,7 +102,7 @@ class ExternalProposalTemporaryUseSubmitSuccessView(TemplateView):
 #     pass
 
 
-class ApprovalHistoryCompareView(HistoryCompareDetailView):
+class ApprovalHistoryCompareView(LoginRequiredMixin, HistoryCompareDetailView):
     """
     View for reversion_compare
     """
@@ -109,7 +110,7 @@ class ApprovalHistoryCompareView(HistoryCompareDetailView):
     template_name = 'disturbance/reversion_history.html'
 
 
-class ComplianceHistoryCompareView(HistoryCompareDetailView):
+class ComplianceHistoryCompareView(LoginRequiredMixin, HistoryCompareDetailView):
     """
     View for reversion_compare
     """
@@ -118,7 +119,7 @@ class ComplianceHistoryCompareView(HistoryCompareDetailView):
 
 
 
-class ProposalTypeHistoryCompareView(HistoryCompareDetailView):
+class ProposalTypeHistoryCompareView(LoginRequiredMixin, HistoryCompareDetailView):
     """
     View for reversion_compare
     """
@@ -126,7 +127,7 @@ class ProposalTypeHistoryCompareView(HistoryCompareDetailView):
     template_name = 'disturbance/reversion_history.html'
 
 
-class HelpPageHistoryCompareView(HistoryCompareDetailView):
+class HelpPageHistoryCompareView(LoginRequiredMixin, HistoryCompareDetailView):
     """
     View for reversion_compare
     """
@@ -147,5 +148,4 @@ class PreviewLicencePDFView(View):
 
     def get_object(self):
         return get_object_or_404(Proposal, id=self.kwargs['proposal_pk'])
-
 
