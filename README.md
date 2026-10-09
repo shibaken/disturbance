@@ -290,3 +290,12 @@ fields. Note: not all options require an entry in `conditions`, only the values 
 }
 ```
 
+# API permissions
+
+DRF endpoints require authentication by default through
+`REST_FRAMEWORK['DEFAULT_PERMISSION_CLASSES']` in `disturbance/settings.py`.
+Endpoint-specific permissions (for example internal-only classes) still apply on top of this.
+An intentionally public DRF endpoint must declare `rest_framework.permissions.AllowAny`
+explicitly and be added to `PUBLIC_DRF_VIEWS` in
+`disturbance/tests/test_api_default_permissions.py`; never use an empty permission list.
+This setting doesn't protect ordinary Django views, which need their own access controls.

@@ -3231,7 +3231,6 @@ class SchemaProposalTypeViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMix
 class DASMapFilterViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Proposal.objects.all()
     serializer_class = DASMapFilterSerializer
-    permission_classes = []
 
     def get_queryset(self):
         user = self.request.user
