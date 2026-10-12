@@ -167,6 +167,7 @@ CRISPY_TEMPLATE_PACK = 'bootstrap3'
 
 MIDDLEWARE += [
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'disturbance.middleware.ContentSecurityPolicyMiddleware',
     'disturbance.middleware.DomainDetectMiddleware',
     'disturbance.middleware.MemoryTrackingMiddleware',
     # 'corsheaders.middleware.CorsMiddleware',
@@ -442,3 +443,4 @@ if len(GIT_COMMIT_HASH) == 0:
 APPLICATION_VERSION = env("APPLICATION_VERSION", "1.0.0") + "-" + GIT_COMMIT_HASH[:7]
 SESSION_ENGINE = 'django.contrib.sessions.backends.file'
 SESSION_FILE_PATH = decouple.config('SESSION_FILE_PATH', default='/app/session_store/')
+SESSION_COOKIE_SECURE = env('SESSION_COOKIE_SECURE', True)
