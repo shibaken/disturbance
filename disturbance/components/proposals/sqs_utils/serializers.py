@@ -18,7 +18,7 @@ from disturbance.components.proposals.models import (
                                     CddpQuestionGroup,
                                 )
 from disturbance.components.main.serializers import DASMapLayerSqsSerializer
-from disturbance.components.main.sanitisation import NH3SanitizeSerializerMixin
+from disturbance.components.main.utils import sanitise_fields
 
 from datetime import datetime
 
@@ -37,7 +37,7 @@ class CddpQuestionGroupSerializer(serializers.ModelSerializer):
         return True if can_user_edit or (user and user.is_superuser) else False
 
 
-class SpatialQueryLayerSerializer(NH3SanitizeSerializerMixin, UniqueFieldsMixin, WritableNestedModelSerializer):
+class SpatialQueryLayerSerializer(UniqueFieldsMixin, WritableNestedModelSerializer):
     #queryset = SpatialQueryLayer.current_layers.filter()
     expiry = serializers.DateField(allow_null=True, required=False)
     buffer = serializers.IntegerField(allow_null=True, required=False)
@@ -84,6 +84,7 @@ class SpatialQueryLayerSerializer(NH3SanitizeSerializerMixin, UniqueFieldsMixin,
 
         #[validated_data.pop(key) for key in ['question', 'answer_mlq', 'layer', 'group']]
         [validated_data.pop(key) for key in ['layer']]
+        validated_data = sanitise_fields(validated_data)
         return SpatialQueryLayer.objects.filter(id=instance.id).update(
             **validated_data, 
             spatial_query_question_id=data['spatial_query_question_id'],
@@ -97,7 +98,7 @@ class SpatialQueryLayerSerializer(NH3SanitizeSerializerMixin, UniqueFieldsMixin,
         return obj.layer.layer_url
 
 
-class DTSpatialQueryQuestionSerializer(NH3SanitizeSerializerMixin, UniqueFieldsMixin, WritableNestedModelSerializer):
+class DTSpatialQueryQuestionSerializer(UniqueFieldsMixin, WritableNestedModelSerializer):
     '''
     Serializer for Datatable SpatialQueryQuestion.
     '''
@@ -159,6 +160,7 @@ class DTSpatialQueryQuestionSerializer(NH3SanitizeSerializerMixin, UniqueFieldsM
 
         #[validated_data.pop(key) for key in ['question', 'answer_mlq', 'layer', 'group']]
         [validated_data.pop(key) for key in ['answer_mlq', 'group']]
+        validated_data = sanitise_fields(validated_data)
         return SpatialQueryQuestion.objects.filter(id=instance.id).update(
             **validated_data, 
             question_id=data.get('question_id'),
