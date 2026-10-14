@@ -17,6 +17,27 @@ from django.utils.html import strip_tags
 from disturbance.components.main.sanitisation import SanitisationModelMixin
 from disturbance.components.main.file_validation import SanitiseFileMixin
 
+
+class SanitiseMixin(models.Model):
+    """
+    Sanitise models fields
+    """
+
+    def save(self, **kwargs):
+        from disturbance.components.main.utils import sanitise_fields
+
+        # sanitise
+        exclude = kwargs.pop("exclude_sanitise", [])  # fields that should not be subject to full tag removal
+        error_on_change = kwargs.pop(
+            "error_on_sanitise", []
+        )  # fields that should not be modified through tag removal (and should throw and error if they are)
+        self = sanitise_fields(self, exclude, error_on_change)
+        super().save(**kwargs)
+
+    class Meta:
+        abstract = True
+
+
 class MapLayer(models.Model):
     display_name = models.CharField(max_length=100, blank=True, null=True)
     layer_name = models.CharField(max_length=200, blank=True, null=True)
