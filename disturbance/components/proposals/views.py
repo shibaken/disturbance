@@ -2,7 +2,7 @@ import json
 import traceback
 
 from django.conf import settings
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.http import HttpResponse, JsonResponse, Http404
 from django.urls import reverse
 from django.shortcuts import render, redirect, get_object_or_404
@@ -19,6 +19,10 @@ from disturbance.components.approvals.models import Approval
 from disturbance.components.compliances.models import Compliance
 
 from reversion.models import Version
+from reversion_compare.views import HistoryCompareDetailView as BaseHistoryCompareDetailView
+
+from disturbance.helpers import is_internal
+
 import csv
 from datetime import datetime
 
@@ -41,8 +45,12 @@ class ProposalView(LoginRequiredMixin, TemplateView):
             traceback.print_exc
             return JsonResponse({error:"something went wrong"},safe=False,status=400)
 
+class HistoryCompareDetailView(LoginRequiredMixin, UserPassesTestMixin, BaseHistoryCompareDetailView):
+    template_name = 'disturbance/reversion_history.html'
 
-from reversion_compare.views import HistoryCompareDetailView
+    def test_func(self):
+        return is_internal(self.request)
+
 class ProposalHistoryCompareView(LoginRequiredMixin, HistoryCompareDetailView):
     """
     View for reversion_compare
