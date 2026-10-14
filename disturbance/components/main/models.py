@@ -14,7 +14,6 @@ from django.db.models import JSONField
 from django.utils import timezone
 from django.core.cache import cache
 from django.utils.html import strip_tags
-from disturbance.components.main.sanitisation import SanitisationModelMixin
 from disturbance.components.main.file_validation import SanitiseFileMixin
 
 
@@ -38,7 +37,7 @@ class SanitiseMixin(models.Model):
         abstract = True
 
 
-class MapLayer(models.Model):
+class MapLayer(SanitiseMixin):
     display_name = models.CharField(max_length=100, blank=True, null=True)
     layer_name = models.CharField(max_length=200, blank=True, null=True)
     option_for_internal = models.BooleanField(default=True)
@@ -60,7 +59,7 @@ class MapLayer(models.Model):
         return ','.join(column_names)
 
 
-class MapColumn(models.Model):
+class MapColumn(SanitiseMixin):
     map_layer = models.ForeignKey(MapLayer, null=True, blank=True, related_name='columns', on_delete=models.SET_NULL)
     name = models.CharField(max_length=100, blank=True, null=True)
     option_for_internal = models.BooleanField(default=True)
@@ -73,7 +72,7 @@ class MapColumn(models.Model):
     def __str__(self):
         return '{0}, {1}'.format(self.map_layer, self.name)
 
-class DASMapLayer(models.Model):
+class DASMapLayer(SanitiseMixin):
     display_name = models.CharField(max_length=100)
     layer_name = models.CharField(max_length=200)
     layer_url = models.CharField(max_length=256, blank=True, null=True)
@@ -98,7 +97,7 @@ class DASMapLayer(models.Model):
         super(DASMapLayer, self).save(*args, **kwargs)
 
 
-class Region(models.Model):
+class Region(SanitiseMixin):
     name = models.CharField(max_length=200, unique=True)
     forest_region = models.BooleanField(default=False)
 
@@ -115,7 +114,7 @@ class ArchivedDistrictManager(models.Manager):
         #return super().get_queryset().all()
         return super().get_queryset().exclude(archive_date__lte=date.today())
 
-class District(models.Model):
+class District(SanitiseMixin):
     region = models.ForeignKey(Region, related_name='districts', on_delete=models.CASCADE)
     name = models.CharField(max_length=200, unique=True)
     code = models.CharField(max_length=3)
@@ -136,7 +135,7 @@ class DASApplicationTypeManager(models.Manager):
        apiary_proposal_types=['Apiary','Site Transfer','Temporary Use']
        return super().get_queryset().exclude(name__in=apiary_proposal_types)
 
-class ApplicationType(models.Model):
+class ApplicationType(SanitiseMixin):
     DISTURBANCE = 'Disturbance'
     DISTURBANCE_UAT = 'Disturbance Training'
     DISTURBANCE_DEMO = 'Disturbance Demo'
@@ -179,7 +178,7 @@ class ApplicationType(models.Model):
         return self.name
 
 
-class ActivityMatrix(models.Model):
+class ActivityMatrix(SanitiseMixin):
     # name = models.CharField(verbose_name='Activity matrix name', max_length=24, choices=application_type_choicelist(), default='Disturbance')
     name = models.CharField(verbose_name='Activity matrix name', max_length=24,
                             choices=[('Disturbance', u'Disturbance'), ('Ecological Thinning', u'Ecological Thinning') ], default='Disturbance')
@@ -208,7 +207,7 @@ class ActivityMatrix(models.Model):
         return False
 
 
-class Tenure(models.Model):
+class Tenure(SanitiseMixin):
     name = models.CharField(max_length=255, unique=True)
     order = models.PositiveSmallIntegerField(default=0)
     application_type = models.ForeignKey(ApplicationType, related_name='tenure_app_types', null=True, on_delete=models.SET_NULL)
@@ -221,7 +220,7 @@ class Tenure(models.Model):
         return '{}: {}'.format(self.name, self.application_type)
 
 
-class UserAction(models.Model):
+class UserAction(SanitiseMixin):
     who = models.ForeignKey(EmailUser, null=False, blank=False, on_delete=models.CASCADE)
     when = models.DateTimeField(null=False, blank=False, auto_now_add=True)
     what = models.TextField(blank=False)
@@ -238,7 +237,7 @@ class UserAction(models.Model):
         app_label = 'disturbance'
 
 
-class CommunicationsLogEntry(models.Model):
+class CommunicationsLogEntry(SanitiseMixin):
     TYPE_CHOICES = [
         ('email', 'Email'),
         ('phone', 'Phone Call'),
@@ -268,7 +267,7 @@ class CommunicationsLogEntry(models.Model):
         app_label = 'disturbance'
 
 
-class Document(SanitiseFileMixin, models.Model):
+class Document(SanitiseFileMixin, SanitiseMixin):
     name = models.CharField(max_length=255, blank=True,
                             verbose_name='name', help_text='')
     description = models.TextField(blank=True,
@@ -292,7 +291,7 @@ class Document(SanitiseFileMixin, models.Model):
         return self.name or self.filename
 
 
-class SystemMaintenance(SanitisationModelMixin, models.Model):
+class SystemMaintenance(SanitiseMixin):
     name = models.CharField(max_length=100)
     description = models.TextField()
     start_date = models.DateTimeField()
@@ -317,8 +316,7 @@ class SystemMaintenance(SanitisationModelMixin, models.Model):
 # from django_ckeditor_5.fields import CKEditor5Field
 from tinymce.models import HTMLField
 
-class GlobalSettings(SanitisationModelMixin, models.Model):
-    sanitise_exclude_fields = {"help_text"}
+class GlobalSettings(SanitiseMixin):
 
     KEY_ASSESSMENT_REMINDER_DAYS = 'assessment_reminder_days'
     DAS_SHAREPOINT_PAGE = 'das_sharepoint_page'
@@ -377,6 +375,10 @@ class GlobalSettings(SanitisationModelMixin, models.Model):
     def __str__(self):
         return self.key
 
+    def save(self, **kwargs):
+        kwargs.setdefault("exclude_sanitise", ["help_text"])
+        super().save(**kwargs)
+
 
 class TemporaryDocumentCollection(models.Model):
     # input_name = models.CharField(max_length=255, null=True, blank=True)
@@ -425,7 +427,7 @@ class RequestTypeEnum():
  
 
 #class TaskMonitor(RevisionedMixin):
-class TaskMonitor(models.Model):
+class TaskMonitor(SanitiseMixin):
     STATUS_FAILED = 'failed'
     STATUS_CREATED = 'created'
     STATUS_RUNNING = 'running'
@@ -466,7 +468,7 @@ class TaskMonitor(models.Model):
     def __str__(self):
         return f'Task {self.task_id}, Proposal: {self.proposal}'
 
-class JobQueue(SanitisationModelMixin, models.Model):
+class JobQueue(SanitiseMixin):
     STATUS = (
        (0, 'Pending'),
        (1, 'Running'),
@@ -489,8 +491,7 @@ class JobQueue(SanitisationModelMixin, models.Model):
         app_label = 'disturbance' 
 
 from tinymce.models import HTMLField
-class Notice(SanitisationModelMixin, models.Model):
-    sanitise_exclude_fields = {"message"}
+class Notice(SanitiseMixin):
 
     NOTICE_TYPE_CHOICES = (
         (0, 'Red Warning'),
@@ -512,6 +513,7 @@ class Notice(SanitisationModelMixin, models.Model):
            return '{}'.format(strip_tags(self.message).replace('&nbsp;', ' '))
     
     def save(self, *args, **kwargs):
+        kwargs.setdefault("exclude_sanitise", ["message"])
         cache.delete('helpers.get_notices()')
         self.full_clean()
         super(Notice, self).save(*args, **kwargs)
