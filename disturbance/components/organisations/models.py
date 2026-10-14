@@ -10,8 +10,7 @@ from django.core.exceptions import ValidationError
 from django.contrib.postgres.fields.jsonb import JSONField
 from ledger.accounts.models import Organisation as ledger_organisation
 from ledger.accounts.models import EmailUser, RevisionedMixin, Document
-from disturbance.components.main.models import UserAction,CommunicationsLogEntry
-from disturbance.components.main.sanitisation import SanitisationModelMixin
+from disturbance.components.main.models import UserAction,CommunicationsLogEntry, SanitiseMixin
 from disturbance.components.main.file_validation import SanitiseFileMixin
 from disturbance.components.organisations.utils import random_generator
 from disturbance.components.organisations.emails import (
@@ -35,7 +34,7 @@ from django.core.files.storage import FileSystemStorage
 #private_storage = FileSystemStorage(location=settings.BASE_DIR+"/private-media/", base_url='/private-media/')
 private_storage = FileSystemStorage(location="private-media/", base_url='/private-media/')
 
-class Organisation(SanitisationModelMixin, models.Model):
+class Organisation(SanitiseMixin):
     organisation = models.ForeignKey(ledger_organisation, on_delete=models.DO_NOTHING)
     # TODO: business logic related to delegate changes.
     delegates = models.ManyToManyField(EmailUser, blank=True, through='UserDelegation', related_name='disturbance_organisations')
@@ -492,7 +491,7 @@ class Organisation(SanitisationModelMixin, models.Model):
             return ','.join(['{} {}'.format(user.first_name, user.last_name) for user in qs[:5]])
         return self.first_five
 
-class OrganisationContact(SanitisationModelMixin, models.Model):
+class OrganisationContact(SanitiseMixin):
     USER_STATUS_CHOICES = (('draft', 'Draft'),
         ('pending', 'Pending'),
         ('active', 'Active'),
@@ -597,7 +596,7 @@ def update_organisation_comms_log_filename(instance, filename):
     return 'organisations/{}/communications/{}/{}'.format(instance.log_entry.organisation.id,instance.id,filename)
 
 
-class OrganisationLogDocument(SanitiseFileMixin, Document):
+class OrganisationLogDocument(SanitiseFileMixin, SanitiseMixin, Document):
     log_entry = models.ForeignKey('OrganisationLogEntry',related_name='documents', on_delete=models.CASCADE)
     _file = models.FileField(upload_to=update_organisation_comms_log_filename, storage=private_storage)
 
@@ -618,7 +617,7 @@ class OrganisationLogEntry(CommunicationsLogEntry):
         app_label = 'disturbance'
 
 
-class OrganisationRequest(SanitisationModelMixin, SanitiseFileMixin, models.Model):
+class OrganisationRequest(SanitiseFileMixin, SanitiseMixin):
     sanitise_file_field = "identification"
     STATUS_CHOICES = (
         ('with_assessor','With Assessor'),
@@ -781,7 +780,7 @@ class OrganisationRequestUserAction(UserAction):
         app_label = 'disturbance'
 
 
-class OrganisationRequestDeclinedDetails(SanitisationModelMixin, models.Model):
+class OrganisationRequestDeclinedDetails(SanitiseMixin):
     request = models.ForeignKey(OrganisationRequest, on_delete=models.CASCADE)
     officer = models.ForeignKey(EmailUser, null=False, on_delete=models.DO_NOTHING)
     reason = models.TextField(blank=True)
@@ -793,7 +792,7 @@ def update_organisation_request_comms_log_filename(instance, filename):
     return 'organisation_requests/{}/communications/{}/{}'.format(instance.log_entry.request.id,instance.id,filename)
 
 
-class OrganisationRequestLogDocument(SanitiseFileMixin, Document):
+class OrganisationRequestLogDocument(SanitiseFileMixin, SanitiseMixin, Document):
     log_entry = models.ForeignKey('OrganisationRequestLogEntry',related_name='documents', on_delete=models.CASCADE)
     _file = models.FileField(upload_to=update_organisation_request_comms_log_filename, storage=private_storage)
 
