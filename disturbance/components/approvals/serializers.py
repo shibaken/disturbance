@@ -9,7 +9,6 @@ from disturbance.components.approvals.models import (
 )
 from disturbance.components.organisations.models import Organisation
 from disturbance.components.main.serializers import CommunicationLogEntrySerializer
-from disturbance.components.main.sanitisation import NH3SanitizeSerializerMixin
 from rest_framework import serializers
 from disturbance.components.proposals.models import Proposal
 
@@ -430,18 +429,18 @@ class DTApprovalSerializer(serializers.ModelSerializer):
         return approval.current_proposal.activity
 
 
-class ApprovalCancellationSerializer(NH3SanitizeSerializerMixin, serializers.Serializer):
+class ApprovalCancellationSerializer(serializers.Serializer):
     cancellation_date = serializers.DateField(input_formats=['%d/%m/%Y', '%Y-%m-%d'])
     cancellation_details = serializers.CharField()
 
 
-class ApprovalSuspensionSerializer(NH3SanitizeSerializerMixin, serializers.Serializer):
+class ApprovalSuspensionSerializer(serializers.Serializer):
     from_date = serializers.DateField(input_formats=['%d/%m/%Y', '%Y-%m-%d'])
     to_date = serializers.DateField(input_formats=['%d/%m/%Y', '%Y-%m-%d'], required=False, allow_null=True)
     suspension_details = serializers.CharField()
 
 
-class ApprovalSurrenderSerializer(NH3SanitizeSerializerMixin, serializers.Serializer):
+class ApprovalSurrenderSerializer(serializers.Serializer):
     surrender_date = serializers.DateField(input_formats=['%d/%m/%Y', '%Y-%m-%d'])
     surrender_details = serializers.CharField()
 

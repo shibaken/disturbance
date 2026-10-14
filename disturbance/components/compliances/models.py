@@ -16,9 +16,8 @@ from taggit.models import TaggedItemBase
 from ledger.accounts.models import Organisation as ledger_organisation
 from ledger.accounts.models import EmailUser, RevisionedMixin
 from disturbance import exceptions
-from disturbance.components.main.sanitisation import SanitisationModelMixin
 from disturbance.components.organisations.models import Organisation
-from disturbance.components.main.models import CommunicationsLogEntry, Region, UserAction, Document
+from disturbance.components.main.models import CommunicationsLogEntry, Region, UserAction, Document, SanitiseMixin
 from disturbance.components.proposals.models import ProposalRequirement, AmendmentReason
 from disturbance.components.compliances.email import (
                         send_compliance_accept_email_notification,
@@ -41,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 
 #class Compliance(models.Model):
-class Compliance(SanitisationModelMixin, RevisionedMixin):
+class Compliance(SanitiseMixin, RevisionedMixin):
 
     PROCESSING_STATUS_CHOICES = (('due', 'Due'),
                                  ('future', 'Future'),
@@ -291,7 +290,7 @@ class ComplianceLogDocument(Document):
     class Meta:
         app_label = 'disturbance'
 
-class CompRequest(models.Model):
+class CompRequest(SanitiseMixin):
     compliance = models.ForeignKey(Compliance, on_delete=models.CASCADE)
     subject = models.CharField(max_length=200, blank=True)
     text = models.TextField(blank=True)
@@ -300,7 +299,7 @@ class CompRequest(models.Model):
     class Meta:
         app_label = 'disturbance'
 
-class ComplianceAmendmentReason(models.Model):
+class ComplianceAmendmentReason(SanitiseMixin):
     reason = models.CharField('Reason', max_length=125)
 
     class Meta:
@@ -310,7 +309,7 @@ class ComplianceAmendmentReason(models.Model):
         return self.reason
 
 
-class ComplianceAmendmentRequest(SanitisationModelMixin, CompRequest):
+class ComplianceAmendmentRequest(CompRequest):
     STATUS_CHOICES = (('requested', 'Requested'), ('amended', 'Amended'))
     # try:
     #     # model requires some choices if AmendmentReason does not yet exist or is empty
