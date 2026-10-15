@@ -228,6 +228,13 @@ def sanitise_fields(instance, exclude=[], error_on_change=[]):
                             )
                         if i in error_on_change and check != instance.__dict__[i][j]:
                             raise serializers.ValidationError("html tags included in field")
+    elif isinstance(instance, list):
+        # DAS: a list directly inside a list (e.g. [["a", "b"]]) is walked by index, not as a dict
+        for j in range(0, len(instance)):
+            if isinstance(instance[j], str):
+                instance[j] = remove_html_tags(instance[j])
+            elif isinstance(instance[j], list) or isinstance(instance[j], dict):
+                instance[j] = sanitise_fields(instance[j])
     else:
         remove_keys = []
         for i in instance:
