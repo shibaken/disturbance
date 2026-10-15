@@ -1,10 +1,6 @@
-import traceback
-from wsgiref.util import FileWrapper
-
 from django.conf import settings
-from django.http.response import HttpResponse
 #from ledger.payments.utils import oracle_parser
-from rest_framework import viewsets, serializers, status, generics, views
+from rest_framework import viewsets, serializers, generics
 from rest_framework.decorators import action, renderer_classes, parser_classes
 from rest_framework.response import Response
 from rest_framework.renderers import JSONRenderer
@@ -89,34 +85,6 @@ class ApplicationTypeViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
-
-
-class BookingSettlementReportView(views.APIView):
-    renderer_classes = (JSONRenderer,)
-
-    def get(self,request,format=None):
-        try:
-            http_status = status.HTTP_200_OK
-            #parse and validate data
-            report = None
-            data = {
-                "date":request.GET.get('date'),
-            }
-            serializer = BookingSettlementReportSerializer(data=data)
-            serializer.is_valid(raise_exception=True)
-            filename = 'Booking Settlement Report-{}'.format(str(serializer.validated_data['date']))
-            # Generate Report
-            report = reports.booking_bpoint_settlement_report(serializer.validated_data['date'])
-            if report:
-                response = HttpResponse(FileWrapper(report), content_type='text/csv')
-                response['Content-Disposition'] = 'attachment; filename="{}.csv"'.format(filename)
-                return response
-            else:
-                raise serializers.ValidationError('No report was generated.')
-        except serializers.ValidationError:
-            raise
-        except Exception as e:
-            traceback.print_exc()
 
 
 class MapLayerViewSet(viewsets.ReadOnlyModelViewSet):
