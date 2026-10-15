@@ -5,7 +5,6 @@ import requests
 
 from disturbance.components.main.models import CommunicationsLogEntry, Region, District, Tenure, ApplicationType, \
     ActivityMatrix, MapLayer, MapColumn, DASMapLayer, GlobalSettings
-from disturbance.components.main.sanitisation import NH3SanitizeSerializerMixin
 from ledger.accounts.models import EmailUser
 
 
@@ -188,8 +187,7 @@ class DASMapLayerSqsSerializer(DASMapLayerSerializer):
 #
 #        return False
 
-class GlobalSettingsSerializer(NH3SanitizeSerializerMixin, serializers.ModelSerializer):
-    sanitise_exclude_fields = {"help_text"}
+class GlobalSettingsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GlobalSettings

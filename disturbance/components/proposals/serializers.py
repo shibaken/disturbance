@@ -32,7 +32,6 @@ from disturbance.components.organisations.models import (
                             )
 from disturbance.components.main.serializers import CommunicationLogEntrySerializer, DASMapLayerSqsSerializer
 from disturbance.components.main.models import DASMapLayer
-from disturbance.components.main.sanitisation import NH3SanitizeSerializerMixin
 
 from disturbance.components.proposals.serializers_base import BaseProposalSerializer, ProposalReferralSerializer, \
     ProposalDeclinedDetailsSerializer, EmailUserSerializer, EmailSerializer
@@ -312,7 +311,7 @@ class ProposalSerializer(BaseProposalSerializer):
          return obj.comment_data
 
 
-class SaveProposalSerializer(NH3SanitizeSerializerMixin, BaseProposalSerializer):
+class SaveProposalSerializer(BaseProposalSerializer):
     assessor_data = serializers.JSONField(required=False)
 
     class Meta:
@@ -361,7 +360,7 @@ class SaveProposalSerializer(NH3SanitizeSerializerMixin, BaseProposalSerializer)
                 )
         read_only_fields=('documents','requirements')
 
-class SaveProposalRegionSerializer(NH3SanitizeSerializerMixin, BaseProposalSerializer):
+class SaveProposalRegionSerializer(BaseProposalSerializer):
 
     class Meta:
         model = Proposal
@@ -641,7 +640,7 @@ class ProposalLogEntrySerializer(CommunicationLogEntrySerializer):
     def get_documents(self,obj):
         return [[d.name,d._file.url] for d in obj.documents.all()]
 
-class SendReferralSerializer(NH3SanitizeSerializerMixin, serializers.Serializer):
+class SendReferralSerializer(serializers.Serializer):
     email = serializers.EmailField()
     text = serializers.CharField(allow_blank=True)
 
@@ -698,7 +697,7 @@ class DTReferralSerializer(serializers.ModelSerializer):
         return self.context.get('template_group')
 
 
-class ProposalRequirementSerializer(NH3SanitizeSerializerMixin, serializers.ModelSerializer):
+class ProposalRequirementSerializer(serializers.ModelSerializer):
     due_date = serializers.DateField(input_formats=['%d/%m/%Y'],required=False,allow_null=True)
     apiary_renewal = serializers.SerializerMethodField()
     recurrence_schedule = serializers.IntegerField(required=False, allow_null=True)
@@ -736,7 +735,7 @@ class ProposalStandardRequirementSerializer(serializers.ModelSerializer):
         fields = ('id','code','text')
 
 
-class ProposedApprovalSerializer(NH3SanitizeSerializerMixin, serializers.Serializer):
+class ProposedApprovalSerializer(serializers.Serializer):
     expiry_date = serializers.DateField(input_formats=['%d/%m/%Y', '%Y-%m-%d'], required=False)
     start_date = serializers.DateField(input_formats=['%d/%m/%Y', '%Y-%m-%d'], required=False)
     details = serializers.CharField(required=False, allow_blank=True)
@@ -777,7 +776,7 @@ class ProposedApprovalSiteTransferSerializer(serializers.Serializer):
 
 
 
-class PropedDeclineSerializer(NH3SanitizeSerializerMixin, serializers.Serializer):
+class PropedDeclineSerializer(serializers.Serializer):
     reason = serializers.CharField()
     cc_email = serializers.CharField(required=False, allow_null=True)
 
@@ -787,7 +786,7 @@ class AmendmentRequestDocumentSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', '_file')
         #fields = '__all__'
 
-class AmendmentRequestSerializer(NH3SanitizeSerializerMixin, serializers.ModelSerializer):
+class AmendmentRequestSerializer(serializers.ModelSerializer):
     #reason = serializers.SerializerMethodField()
     amendment_request_documents = AmendmentRequestDocumentSerializer(many=True, read_only=True)
 
@@ -812,7 +811,7 @@ class AmendmentRequestDisplaySerializer(serializers.ModelSerializer):
         return obj.reason.reason if obj.reason else None
 
 
-class SearchKeywordSerializer(NH3SanitizeSerializerMixin, serializers.Serializer):
+class SearchKeywordSerializer(serializers.Serializer):
     number = serializers.CharField()
     id = serializers.IntegerField()
     type = serializers.CharField()
@@ -831,7 +830,7 @@ class SearchReferenceSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     type = serializers.CharField()
 
-class SearchGeoJsonSerializer(NH3SanitizeSerializerMixin, serializers.Serializer):
+class SearchGeoJsonSerializer(serializers.Serializer):
     search_geojson = serializers.JSONField(required=False)
 
 class QuestionOptionSerializer(serializers.ModelSerializer):
@@ -1200,7 +1199,7 @@ class DTSchemaMasterlistSerializer(SchemaMasterlistSerializer):
 
 
 
-class SchemaQuestionSerializer(NH3SanitizeSerializerMixin, serializers.ModelSerializer):
+class SchemaQuestionSerializer(serializers.ModelSerializer):
     '''
     Serializer for Schema builder using Section Questions.
     '''

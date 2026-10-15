@@ -13,8 +13,7 @@ from ledger.accounts.models import EmailUser, RevisionedMixin
 from disturbance.components.approvals.pdf import create_approval_document
 from disturbance.components.organisations.models import Organisation
 from disturbance.components.proposals.models import Proposal, ProposalUserAction
-from disturbance.components.main.models import CommunicationsLogEntry, UserAction, Document
-from disturbance.components.main.sanitisation import SanitisationModelMixin
+from disturbance.components.main.models import CommunicationsLogEntry, UserAction, Document, SanitiseMixin
 from disturbance.components.approvals.email import (
     send_approval_expire_email_notification,
     send_approval_cancel_email_notification,
@@ -72,7 +71,7 @@ class RenewalDocument(Document):
         app_label = 'disturbance'
 
 
-class Approval(SanitisationModelMixin, RevisionedMixin):
+class Approval(SanitiseMixin, RevisionedMixin):
     STATUS_CURRENT = 'current'
     STATUS_EXPIRED = 'expired'
     STATUS_CANCELLED = 'cancelled'

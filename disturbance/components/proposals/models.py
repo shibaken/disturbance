@@ -46,9 +46,8 @@ from ledger.accounts.models import EmailUser, RevisionedMixin
 from disturbance import exceptions
 from disturbance.components.organisations.models import Organisation
 from disturbance.components.main.models import CommunicationsLogEntry, UserAction, Document, Region, District, \
-    ApplicationType, DASMapLayer, TaskMonitor, RequestTypeEnum
+    ApplicationType, DASMapLayer, TaskMonitor, RequestTypeEnum, SanitiseMixin
 from disturbance.components.main.utils import get_department_user
-from disturbance.components.main.sanitisation import SanitisationModelMixin
 from disturbance.components.main.file_validation import STANDARD_ALLOWED_EXTENSIONS, GIS_ARCHIVE_ALLOWED_EXTENSIONS
 from disturbance.components.proposals.email import (
         send_referral_email_notification,
@@ -101,7 +100,7 @@ def update_amendment_request_doc_filename(instance, filename):
     return 'proposals/{}/amendment_request_documents/{}'.format(instance.amendment_request.proposal.id,filename)
 
 
-class ProposalType(models.Model):
+class ProposalType(SanitiseMixin):
 
     description = models.CharField(max_length=256, blank=True, null=True)
     name = models.CharField(verbose_name='Application name (eg. Disturbance, Ecological Thinning)', max_length=64, choices=ApplicationType.APPLICATION_TYPES, default=ApplicationType.APPLICATION_TYPES[0][0])
@@ -113,6 +112,10 @@ class ProposalType(models.Model):
 
     def __str__(self):
         return '{} - v{}'.format(self.name, self.version)
+
+    def save(self, **kwargs):
+        kwargs.setdefault("exclude_sanitise", ["schema"])
+        super().save(**kwargs)
 
     class Meta:
         app_label = 'disturbance'
@@ -146,7 +149,7 @@ class TaggedProposalAssessorGroupActivities(TaggedItemBase):
     class Meta:
         app_label = 'disturbance'
 
-class ProposalAssessorGroup(models.Model):
+class ProposalAssessorGroup(SanitiseMixin):
     name = models.CharField(max_length=255)
     #members = models.ManyToManyField(EmailUser,blank=True)
     #regions = TaggableManager(verbose_name="Regions",help_text="A comma-separated list of regions.",through=TaggedProposalAssessorGroupRegions,related_name = "+",blank=True)
@@ -203,7 +206,7 @@ class TaggedProposalApproverGroupActivities(TaggedItemBase):
     class Meta:
         app_label = 'disturbance'
 
-class ProposalApproverGroup(models.Model):
+class ProposalApproverGroup(SanitiseMixin):
     name = models.CharField(max_length=255)
     #members = models.ManyToManyField(EmailUser,blank=True)
     #regions = TaggableManager(verbose_name="Regions",help_text="A comma-separated list of regions.",through=TaggedProposalApproverGroupRegions,related_name = "+",blank=True)
@@ -250,7 +253,7 @@ class ProposalApproverGroup(models.Model):
     def members_email(self):
         return [i.email for i in self.members.all()]
 
-class CddpQuestionGroup(models.Model):
+class CddpQuestionGroup(SanitiseMixin):
     name = models.CharField(max_length=255)
     members = models.ManyToManyField(EmailUser)
     default = models.BooleanField(default=False)
@@ -342,7 +345,7 @@ def fee_invoice_references_default():
     return []
 
 
-class Proposal(SanitisationModelMixin, DirtyFieldsMixin, RevisionedMixin):
+class Proposal(SanitiseMixin, DirtyFieldsMixin, RevisionedMixin):
     CUSTOMER_STATUS_TEMP = 'temp'
     CUSTOMER_STATUS_DRAFT = 'draft'
     CUSTOMER_STATUS_WITH_ASSESSOR = 'with_assessor'
@@ -516,6 +519,7 @@ class Proposal(SanitisationModelMixin, DirtyFieldsMixin, RevisionedMixin):
       
     
     def save(self, *args, **kwargs):
+        kwargs.setdefault("exclude_sanitise", ["schema"])
         # Store the original values of fields we want to keep track of in 
         # django reversion before they are overwritten by super() below
         original_processing_status = self._original_state['processing_status']
@@ -2466,7 +2470,7 @@ class AmendmentRequestDocument(Document):
         if self.can_delete:
             return super(AmendmentRequestDocument, self).delete()
 
-class ProposalRequest(SanitisationModelMixin, models.Model):
+class ProposalRequest(SanitiseMixin):
     proposal = models.ForeignKey(Proposal, on_delete=models.CASCADE)
     subject = models.CharField(max_length=200, blank=True)
     text = models.TextField(blank=True)
@@ -2484,7 +2488,7 @@ class ComplianceRequest(ProposalRequest):
         app_label = 'disturbance'
 
 
-class AmendmentReason(SanitisationModelMixin, models.Model):
+class AmendmentReason(SanitiseMixin):
     reason = models.CharField('Reason', max_length=125)
 
     class Meta:
@@ -2583,7 +2587,7 @@ class Assessment(ProposalRequest):
     class Meta:
         app_label = 'disturbance'
 
-class ProposalDeclinedDetails(SanitisationModelMixin, models.Model):
+class ProposalDeclinedDetails(SanitiseMixin):
     proposal = models.OneToOneField(Proposal, on_delete=models.CASCADE)
     officer = models.ForeignKey(EmailUser, null=False, on_delete=models.DO_NOTHING)
     reason = models.TextField(blank=True)
@@ -2594,7 +2598,7 @@ class ProposalDeclinedDetails(SanitisationModelMixin, models.Model):
 
 
 #class ProposalStandardRequirement(models.Model):
-class ProposalStandardRequirement(RevisionedMixin):
+class ProposalStandardRequirement(SanitiseMixin, RevisionedMixin):
     SYSTEM_CHOICES = (
             ('disturbance', 'Disturbance'),
                       )
@@ -2610,7 +2614,7 @@ class ProposalStandardRequirement(RevisionedMixin):
         app_label = 'disturbance'
 
 
-class ProposalRequirement(SanitisationModelMixin, OrderedModel):
+class ProposalRequirement(SanitiseMixin, OrderedModel):
     #from disturbance.components.approvals.models import Approval
     RECURRENCE_PATTERNS = [(1, 'Weekly'), (2, 'Monthly'), (3, 'Yearly')]
     standard_requirement = models.ForeignKey(ProposalStandardRequirement,null=True,blank=True, on_delete=models.SET_NULL)
@@ -2717,7 +2721,7 @@ class ProposalUserAction(UserAction):
 
 
 
-class Referral(SanitisationModelMixin, models.Model):
+class Referral(SanitiseMixin):
     SENT_CHOICES = (
         (1,'Sent From Assessor'),
         (2,'Sent From Referral')
@@ -3265,8 +3269,7 @@ def get_search_geojson(proposal_lodgement_numbers,request):
 
 # from django_ckeditor_5.fields import CKEditor5Field
 from tinymce.models import HTMLField
-class HelpPage(SanitisationModelMixin, models.Model):
-    sanitise_exclude_fields = {"content"}
+class HelpPage(SanitiseMixin):
 
     HELP_TEXT_EXTERNAL = 1
     HELP_TEXT_INTERNAL = 2
@@ -3285,6 +3288,10 @@ class HelpPage(SanitisationModelMixin, models.Model):
     class Meta:
         app_label = 'disturbance'
         unique_together = ('application_type', 'help_type', 'version')
+
+    def save(self, **kwargs):
+        kwargs.setdefault("exclude_sanitise", ["content"])
+        super().save(**kwargs)
 
 
 def export_file_path(instance, filename):
@@ -3319,7 +3326,7 @@ class ExportDocument(models.Model):
 # --------------------------------------------------------------------------------------
 # Generate JSON schema models start
 # --------------------------------------------------------------------------------------
-class QuestionOption(models.Model):
+class QuestionOption(SanitiseMixin):
     label = models.CharField(max_length=1024, unique=True)
     value = models.CharField(max_length=1024)
 
@@ -3330,10 +3337,13 @@ class QuestionOption(models.Model):
     def __str__(self):
         return self.label 
 
+    def save(self, **kwargs):
+        kwargs.setdefault("exclude_sanitise", ["label"])
+        super().save(**kwargs)
+
 # from django_ckeditor_5.fields import CKEditor5Field
 from tinymce.models import HTMLField
-class MasterlistQuestion(SanitisationModelMixin, models.Model):
-    sanitise_exclude_fields = {"help_text", "help_text_assessor"}
+class MasterlistQuestion(SanitiseMixin):
 
     ANSWER_TYPE_CHECKBOX = 'checkbox'
     ANSWER_TYPE_RADIO = 'radiobuttons'
@@ -3389,6 +3399,10 @@ class MasterlistQuestion(SanitisationModelMixin, models.Model):
 
     def __str__(self):
         return self.question
+
+    def save(self, **kwargs):
+        kwargs.setdefault("exclude_sanitise", ["question", "help_text", "help_text_assessor", "property_cache"])
+        super().save(**kwargs)
 
     def get_options(self):
         '''
@@ -3588,7 +3602,7 @@ class MasterlistQuestion(SanitisationModelMixin, models.Model):
             self.property_cache['expanders'] = data
 
 
-class ProposalTypeSection(models.Model):
+class ProposalTypeSection(SanitiseMixin):
     section_name = models.CharField(max_length=100)
     section_label = models.CharField(max_length=100)
     index = models.IntegerField(blank=True, default=0)
@@ -3624,7 +3638,7 @@ def limit_sectionquestion_choices_sql():
     except:
         return {}
 
-class SectionQuestion(SanitisationModelMixin, models.Model):
+class SectionQuestion(SanitiseMixin):
     TAG_CHOICES=(('isCopiedToPermit', 'isCopiedToPermit'),
                  ('isRequired', 'isRequired'),
                  ('canBeEditedByAssessor', 'canBeEditedByAssessor'),
@@ -3685,6 +3699,10 @@ class SectionQuestion(SanitisationModelMixin, models.Model):
 
     def __str__(self):
         return str(self.id)  
+
+    def save(self, **kwargs):
+        kwargs.setdefault("exclude_sanitise", ["property_cache"])
+        super().save(**kwargs)
 
     def clean(self):
 
@@ -3776,7 +3794,7 @@ class SectionQuestion(SanitisationModelMixin, models.Model):
 #    def get_queryset(self):
 #        return super().get_queryset().exclude(expiry__lt=datetime.datetime.now().date())
 
-class SpatialQueryQuestion(SanitisationModelMixin, RevisionedMixin):
+class SpatialQueryQuestion(SanitiseMixin, RevisionedMixin):
                         
     question = models.ForeignKey(MasterlistQuestion, related_name='questions', on_delete=models.PROTECT )
     answer_mlq = models.ForeignKey(QuestionOption, related_name='question_options', on_delete=models.CASCADE , blank=True, null=True)
@@ -3821,7 +3839,7 @@ class CurrentSpatialQueryLayerManager(models.Manager):
         return super().get_queryset().exclude(expiry__lt=datetime.datetime.now().date())
 
 
-class SpatialQueryLayer(SanitisationModelMixin, RevisionedMixin):
+class SpatialQueryLayer(SanitiseMixin, RevisionedMixin):
     OVERLAPPING = 'Overlapping'
     OUTSIDE     = 'Outside'
     INSIDE      = 'Inside'
@@ -3907,7 +3925,7 @@ class SpatialQueryLayer(SanitisationModelMixin, RevisionedMixin):
         return self.layer.layer_name
 
 
-class SpatialQueryMetrics(models.Model):
+class SpatialQueryMetrics(SanitiseMixin):
     
     def get_default_items():
         return [{}]
