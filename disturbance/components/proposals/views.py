@@ -51,7 +51,7 @@ class HistoryCompareDetailView(LoginRequiredMixin, UserPassesTestMixin, BaseHist
     def test_func(self):
         return is_internal(self.request)
 
-class ProposalHistoryCompareView(LoginRequiredMixin, HistoryCompareDetailView):
+class ProposalHistoryCompareView(HistoryCompareDetailView):
     """
     View for reversion_compare
     """
@@ -59,7 +59,7 @@ class ProposalHistoryCompareView(LoginRequiredMixin, HistoryCompareDetailView):
     template_name = 'disturbance/reversion_history.html'
 
 
-class ProposalHistoryLatestCompareView(LoginRequiredMixin, HistoryCompareDetailView):
+class ProposalHistoryLatestCompareView(HistoryCompareDetailView):
     """
     View for reversion_compare that returns on the x most recent revisions
     """
@@ -67,7 +67,7 @@ class ProposalHistoryLatestCompareView(LoginRequiredMixin, HistoryCompareDetailV
     template_name = 'disturbance/reversion_history.html'
 
 
-class ProposalFilteredHistoryCompareView(LoginRequiredMixin, HistoryCompareDetailView):
+class ProposalFilteredHistoryCompareView(HistoryCompareDetailView):
     """
     View for reversion_compare - with 'status' in the comment field only'
     """
@@ -88,7 +88,7 @@ class ProposalFilteredHistoryCompareView(LoginRequiredMixin, HistoryCompareDetai
         return action_list
 
 
-class ReferralHistoryCompareView(LoginRequiredMixin, HistoryCompareDetailView):
+class ReferralHistoryCompareView(HistoryCompareDetailView):
     """
     View for reversion_compare
     """
@@ -110,7 +110,7 @@ class ExternalProposalTemporaryUseSubmitSuccessView(LoginRequiredMixin, Template
 #     pass
 
 
-class ApprovalHistoryCompareView(LoginRequiredMixin, HistoryCompareDetailView):
+class ApprovalHistoryCompareView(HistoryCompareDetailView):
     """
     View for reversion_compare
     """
@@ -118,7 +118,7 @@ class ApprovalHistoryCompareView(LoginRequiredMixin, HistoryCompareDetailView):
     template_name = 'disturbance/reversion_history.html'
 
 
-class ComplianceHistoryCompareView(LoginRequiredMixin, HistoryCompareDetailView):
+class ComplianceHistoryCompareView(HistoryCompareDetailView):
     """
     View for reversion_compare
     """
@@ -127,7 +127,7 @@ class ComplianceHistoryCompareView(LoginRequiredMixin, HistoryCompareDetailView)
 
 
 
-class ProposalTypeHistoryCompareView(LoginRequiredMixin, HistoryCompareDetailView):
+class ProposalTypeHistoryCompareView(HistoryCompareDetailView):
     """
     View for reversion_compare
     """
@@ -135,7 +135,7 @@ class ProposalTypeHistoryCompareView(LoginRequiredMixin, HistoryCompareDetailVie
     template_name = 'disturbance/reversion_history.html'
 
 
-class HelpPageHistoryCompareView(LoginRequiredMixin, HistoryCompareDetailView):
+class HelpPageHistoryCompareView(HistoryCompareDetailView):
     """
     View for reversion_compare
     """

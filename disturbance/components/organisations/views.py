@@ -1,10 +1,8 @@
-from django.contrib.auth.mixins import LoginRequiredMixin
-
 from disturbance.components.organisations.models import Organisation
 from disturbance.components.proposals.views import HistoryCompareDetailView
 
 
-class OrganisationHistoryCompareView(LoginRequiredMixin, HistoryCompareDetailView):
+class OrganisationHistoryCompareView(HistoryCompareDetailView):
     """
     View for reversion_compare
     """
