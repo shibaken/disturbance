@@ -9,7 +9,6 @@ from disturbance.admin import disturbance_admin_site
 from disturbance.components.main.views import FileDownloadView, FileListView
 from disturbance.components.proposals import views as proposal_views
 from disturbance.components.organisations import views as organisation_views
-from disturbance.components.proposals.views import ExternalProposalTemporaryUseSubmitSuccessView
 
 from disturbance.components.users import api as users_api
 from disturbance.components.organisations import api as org_api
@@ -141,7 +140,6 @@ urlpatterns = [
     url(r'^internal/', views.InternalView.as_view(), name='internal'),
     url(r'^internal/proposal/(?P<proposal_pk>\d+)/referral/(?P<referral_pk>\d+)/$', views.ReferralView.as_view(), name='internal-referral-detail'),
     #url(r'^layer_json/(?P<layer_name>[^/]+)/$',proposal_views.LayerJsonView.as_view(), name='layer_json'),
-    url(r'^external/proposal/(?P<proposal_pk>\d+)/submit_temp_use_success/$', ExternalProposalTemporaryUseSubmitSuccessView.as_view(),),
     url(r'^external/', views.ExternalView.as_view(), name='external'),
     url(r'^firsttime/$', views.first_time, name='first_time'),
     url(r'^gisdata/$', views.gisdata, name='gisdata'),
@@ -152,8 +150,6 @@ urlpatterns = [
     url(r'^mgt-commands/$', views.ManagementCommandsView.as_view(), name='mgt-commands'),
     url(r'^email-exports/$', views.EmailExportsView.as_view(), name='email-exports'),
     #url(r'^external/organisations/manage/$', views.ExternalView.as_view(), name='manage-org'),
-    #following url is used to include url path when sending Proposal amendment request to user.
-    url(r'^proposal/$', proposal_views.ProposalView.as_view(), name='proposal'),
     url(r'^preview/licence-pdf/(?P<proposal_pk>\d+)',proposal_views.PreviewLicencePDFView.as_view(), name='preview_licence_pdf'),
 
     # following url is defined so that to include url path when sending Proposal amendment request to user.

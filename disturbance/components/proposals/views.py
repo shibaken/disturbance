@@ -1,19 +1,16 @@
 import json
-import traceback
 
 from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.http import HttpResponse, JsonResponse, Http404
-from django.urls import reverse
-from django.shortcuts import render, redirect, get_object_or_404
-from django.views.generic import View, TemplateView
+from django.http import HttpResponse, Http404
+from django.shortcuts import get_object_or_404
+from django.views.generic import View
 from django.core.cache import cache
 from django.db.models import Q
 
 import requests
 from requests.auth import HTTPBasicAuth
 
-from disturbance.components.proposals.utils import create_data_from_form
 from disturbance.components.proposals.models import Proposal, Referral, ProposalType, HelpPage
 from disturbance.components.approvals.models import Approval
 from disturbance.components.compliances.models import Compliance
@@ -26,24 +23,6 @@ from disturbance.helpers import is_internal
 import csv
 from datetime import datetime
 
-
-class ProposalView(LoginRequiredMixin, TemplateView):
-    template_name = 'disturbance/proposal.html'
-
-    def post(self, request, *args, **kwargs):
-        extracted_fields = []
-        try:
-            proposal_id = request.POST.pop('proposal_id')
-            proposal = Proposal.objects.get(proposal_id)
-            schema = json.loads(request.POST.pop('schema')[0])
-            extracted_fields = create_data_from_form(schema,request.POST, request.FILES)
-            proposal.schema = schema;
-            proposal.data = extracted_fields
-            proposal.save()
-            return redirect(reverse('external'))
-        except:
-            traceback.print_exc
-            return JsonResponse({error:"something went wrong"},safe=False,status=400)
 
 class HistoryCompareDetailView(LoginRequiredMixin, UserPassesTestMixin, BaseHistoryCompareDetailView):
     template_name = 'disturbance/reversion_history.html'
@@ -94,16 +73,6 @@ class ReferralHistoryCompareView(HistoryCompareDetailView):
     """
     model = Referral
     template_name = 'disturbance/reversion_history.html'
-
-
-class ExternalProposalTemporaryUseSubmitSuccessView(LoginRequiredMixin, TemplateView):
-    model = Proposal
-    template_name = 'disturbance/temporary_use_submit_success.html'
-
-    def post(self, request, *args, **kwargs):
-        proposal_id = kwargs['proposal_pk']
-        p = Proposal.objects.get(id=proposal_id)
-        return render(request, self.template_name, context={'modified_date': p.modified_date})
 
 
 # def success_view(request):
